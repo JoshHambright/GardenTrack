@@ -163,14 +163,18 @@ Legend: **v1** = phases 0–5, the first useful year · **v2** = phases 6–10 �
 |---|---|
 | Beds with dimensions, kind, and purpose (annual veg / perennial / native / mixed) | v1 |
 | Bed map — pan/zoom, tap to select, mobile-native | v1 |
-| Square-foot grid within a bed | v1 |
-| **Photo-traced beds — shoot a bed, tap four corners, plan on the rectified image** | v1 |
-| Containers, greenhouse, cold frame, border as bed types | v1 |
+| Square-foot grid within an annual bed | v1 |
+| **Non-rectangular beds — L, U, triangle, any straight-edged outline** | v1 |
+| **Curved beds — kidney islands, flowing borders, spiral herb gardens** | v1 |
+| **Holes — a tree, stump, downspout or boulder inside a bed** | v1 |
+| **Partial cells at a curved or angled edge, at pro-rata capacity** | v1 |
+| Grid rotation independent of the bed's own angle | v1 |
+| **Photo-traced beds — shoot a bed, tap its corners, plan on the rectified image** | v1 |
+| Containers, greenhouse, cold frame, border, mound as bed types | v1 |
 | Sun exposure per bed, and how it shifts across the season | v2 |
 | Multiple sites (home + community plot) | v2 |
-| Free placement at real coordinates | v2 |
 | Automatic bed-boundary detection from a photo | backlog (D-015) |
-| Irregular / polygon bed shapes | backlog |
+| Elevation, terracing, slope as geometry | cut (D-020) |
 
 ### 7.2 Plant library
 
@@ -220,12 +224,14 @@ Legend: **v1** = phases 0–5, the first useful year · **v2** = phases 6–10 �
 | Feature | Tier |
 |---|---|
 | Place plantings into beds for a season | v1 |
+| **Grid layout for annual vegetable beds** | v1 |
+| **Drifts — a flowing mass of one species, for native and perennial beds** | v1 |
+| **Specimens — a single shrub or tree, with a footprint that grows as it matures** | v1 |
 | Spacing validation ("9 carrots per sq ft; you've drawn 20") | v1 |
 | Schedule derived from frost dates and days to maturity, spring and fall | v1 |
 | **Perennial occupancy — cells reserved year-round, including dormancy** | v1 |
 | Bed occupancy timeline — a time axis, not just a map | v1 |
 | Copy last season as a starting point | v1 |
-| Mature-spread projection (a shrub's footprint is a function of its age) | v1 |
 | Succession planting ("sow every 2 weeks × 5") | v2 |
 | Crop rotation warnings by family — annual beds only | v2 |
 | Bloom succession — find the gaps in the flowering calendar | v2 |

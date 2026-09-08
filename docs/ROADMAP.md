@@ -56,28 +56,35 @@ with the network off; a written per-photo storage budget backed by a measurement
 
 A published page opened on Josh's actual phone. Two things to prove:
 
-1. Draw a bed, grid it, place things in cells, pan and zoom — **on a landscape
-   tablet first**, where the editor is designed to live (D-018), then with a
-   thumb on a phone to find what has to change.
-2. Photograph a real bed, tap four corners, enter one edge length, and see
+1. Draw a bed — **including an L-shape and a curved island border** — grid it,
+   place things in cells, pan and zoom. **On a landscape tablet first**, where
+   the editor is designed to live (D-018), then with a thumb on a phone to find
+   what has to change.
+2. Draw a **drift** in a curved bed and place a specimen shrub, since native beds
+   don't use the grid at all (D-020). Two layout interactions, one canvas.
+3. Photograph a real bed, tap its corners, enter one edge length, and see
    whether the rectified top-down image is *good enough to plan on* — including
    from a normal standing-height shot, not just from a ladder.
 
 **Exit:** an approved interaction, plus a written note on what it proved — which
-gestures work, what cell size is thumb-reachable, and what camera angle the
-homography needs before the result stops being usable.
+gestures work, what cell size is thumb-reachable, whether grid and drift editing
+can share one canvas without a mode switch that confuses, and what camera angle
+the homography needs before the result stops being usable.
 
 ---
 
 ## Phase 1 — Site, beds, and the map
 
 Site with its four geographic facts (DATA_MODEL §2) resolved from a location.
-Create, edit, archive beds with real dimensions and a `purpose`. The map: beds
-laid out spatially, pan/zoom, tap to select. Bed detail with its grid, over the
-traced photo where one exists.
+Create, edit, archive beds as **outlines** — straight-edged or curved, with holes
+for the tree in the middle (D-019) — each with a `kind` and a `purpose`. The
+polygon clipper and the per-cell `coverage` calculation. The map: beds laid out
+spatially, pan/zoom, tap to select. Bed detail with its grid, over the traced
+photo where one exists.
 
-**Exit:** Josh's real garden is entered, and the map is recognisable as his
-garden on a phone held outdoors in sunlight.
+**Exit:** Josh's real garden is entered — including at least one bed that isn't a
+rectangle — and the map is recognisable as his garden on a phone held outdoors in
+sunlight. Partial cells at a curved edge report sane capacity.
 
 ---
 
@@ -97,7 +104,9 @@ with correct viability flags.
 
 ## Phase 3 — Planning and the derived schedule
 
-Place plantings into cells. Spacing validation. The scheduling engine from
+Place plantings into cells **for annual beds, and as drifts and specimens for
+native and perennial beds** (D-020) — three footprint modes, one occupancy model.
+Spacing validation across all three. The scheduling engine from
 DATA_MODEL §5 in both directions — spring anchored to last frost, fall counted
 back from first frost. **Perennial occupancy**: open-ended plantings, cells
 reserved year-round through dormancy, the planner refusing to place over them
@@ -107,8 +116,9 @@ age. The bed occupancy timeline. Copy a previous season as a starting point.
 This is the phase where the app first does something a spreadsheet can't.
 
 **Exit:** a complete plan for one real season, every date derived; the occupancy
-timeline correctly shows a bed turning over mid-summer; and the planner refuses
-to put lettuce on top of a dormant coneflower in March.
+timeline correctly shows a bed turning over mid-summer; a drift of *Liatris* in a
+curved border is plannable without a grid cell anywhere in sight; and the planner
+refuses to put lettuce on top of a dormant coneflower in March.
 
 ---
 
@@ -212,7 +222,8 @@ offline edits on both devices reconcile without data loss.
 
 ## Not scheduled
 
-Automatic bed-boundary detection (D-015), aggregate community data,
-cost-vs-yield, irrigation logs, compost batches, polygon bed shapes, multiple
+Automatic bed-boundary detection (D-015), elevation and terracing as geometry
+(D-020), aggregate community data,
+cost-vs-yield, irrigation logs, compost batches, multiple
 draft plans per season, plan import as a template. All carry a tier in
 PRODUCT.md §7. Recorded, not deleted.

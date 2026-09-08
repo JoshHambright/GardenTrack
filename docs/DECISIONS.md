@@ -49,7 +49,11 @@ field lookup. Needs an index and a small amount of discipline.
 
 ---
 
-### D-004 · Square-foot grid in v1, real coordinates in the model from day one
+### D-004 · Square-foot grid in v1, real coordinates in the model from day one — **REVISED, see D-019 / D-020**
+
+> Superseded in part. The grid survives for annual vegetable beds; it is *not*
+> the v1 layout for native and perennial beds, and beds are no longer assumed
+> rectangular. Original entry kept below for the record.
 **Chose:** v1 places plants in 1 ft cells. `Planting` reserves an alternative
 `{x, y, radiusMm}` shape so free placement is additive in v2.
 **Why:** The grid is dramatically easier to build, far easier to hit with a
@@ -278,4 +282,57 @@ it.
 phone — direct touch plus enough canvas to see a whole bed is the combination it
 actually wants — then adapted down to phone and up to desktop. This is the one
 place the phone doesn't lead, and Spike A tests on both.
+**Status:** ✅ Accepted
+
+---
+
+### D-019 · Beds are outlines; the grid is clipped to them
+**Chose:** A bed *is* a closed ring of points (splined when curved) plus optional
+holes. No `width`/`height` fields. The planting grid is laid over the bounding box
+and clipped to the outline, giving every cell a `coverage` fraction in 0…1
+(DATA_MODEL §4.1). A rectangle is the four-point case.
+**Why:** Real beds are L-shaped around corners, U-shaped around seating, kidney-
+shaped as island borders, and frequently have a tree or a downspout in the middle.
+Filing that to "backlog" was defensible when this was a vegetable app; it stopped
+being defensible the moment native and perennial plantings came into scope, since
+curved borders are the *dominant* shape on that half of the garden.
+
+The clipping approach is what makes it affordable. The grid stays a regular
+lattice, so spacing validation, occupancy queries, capacity maths and
+yield-per-square-foot all keep working untouched — the shape reaches them only as
+a per-cell number. Special-casing "L-shaped bed" through that logic instead would
+touch every one of those.
+**Costs:** A polygon clipper and a spline sampler, neither large, plus the
+partial-cell capacity rule (≥0.85 full, 0.3–0.85 pro-rata, <0.3 unusable) which is
+a judgement call that will need tuning against real beds. Bed area becomes a
+computed property rather than a stored one.
+**Why now rather than later:** cheap today, expensive in a year. Retrofitting
+`coverage` after `cells[]` indices and capacity maths have shipped means revisiting
+every one of them, and after real data exists it's a migration.
+**Status:** ✅ Accepted
+
+---
+
+### D-020 · Layout mode follows bed purpose; drifts are first-class
+**Chose:** `Bed.layoutMode` ∈ `grid | free`, defaulting from `Bed.purpose`. A
+Planting's footprint is a union of `cells`, `drift` (a ring plus a count) and
+`point` (a specimen with a growing radius) — DATA_MODEL §4.2. Free placement is
+therefore **v1 for perennial and native beds**, not v2.
+**Why:** A square-foot grid is not an approximation of a native planting, it's a
+description of something else. Naturalistic and matrix planting is drifts, masses
+and repeats of one species through a border; a prairie bed on a 1 ft lattice is
+simply wrong, and no amount of partial-cell arithmetic fixes it. The earlier
+"grid now, free placement later" call was made when this was a vegetable app, and
+the native-first direction invalidated it.
+
+Unifying the three modes behind a footprint union keeps the cost down: every mode
+reduces to an area, and occupancy, spacing and history queries only ever needed
+an area.
+**Costs:** Two layout interactions in v1 instead of one, which lands squarely on
+the bed editor — already the riskiest UI in the app. Spike A now has to prove
+both. Accepted: shipping a native-plant app whose only layout tool is a
+vegetable grid would fail at the thing we said the product was for.
+**Also settled:** elevation is **not modelled.** Terraced beds, hügelkultur
+mounds and slopes are recorded in `soilNotes` and photos. Geometry stays 2D;
+modelling terrain is a different application.
 **Status:** ✅ Accepted

@@ -121,13 +121,96 @@ and wrong in year six, and the app should be able to say so at planting time.
 
 ### Bed
 ```
-Bed { id, siteId, name, kind, purpose, widthMm, lengthMm, x, y, rotation,
-      gridCellMm, soilNotes?, sunHours?, photoPointId?, archivedAt? }
+Bed { id, siteId, name, kind, purpose, layoutMode,
+      outline: Ring, holes: Ring[],        // see §4.1
+      x, y, rotation,
+      gridCellMm, gridOrigin, gridRotation,
+      soilNotes?, sunHours?, photoPointId?, archivedAt? }
+
+Ring = { points: [{x, y}], curved: boolean }   // closed; curved ⇒ spline through points
 ```
-- `kind` — `raised | inGround | container | greenhouse | coldFrame | border`
-- `purpose` — `annualVeg | perennial | mixed | native` — drives whether rotation
-  checking runs at all, and which planting defaults apply.
+- `kind` — `raised | inGround | container | greenhouse | coldFrame | border | mound`
+- `purpose` — `annualVeg | perennial | native | mixed` — drives whether rotation
+  checking runs, which planting defaults apply, and the default `layoutMode`.
+- **There is no `widthMm`/`lengthMm`.** A bed is its outline; a rectangle is the
+  four-point case. Width and height are derived from the bounding box, which is
+  the only honest answer once beds are L-shaped.
 - Beds are **archived, never deleted.** A deleted bed orphans a decade of history.
+
+### 4.1 Bed shape
+
+Real gardens are not made of rectangles. Raised beds go L-shaped around a corner
+and U-shaped around a sitting area; island borders are kidneys; herb gardens are
+spirals; in-ground plots follow a property line; and a great many beds have a
+tree, a downspout, a stump or a boulder in the middle of them.
+
+Two separable problems live here, with very different costs.
+
+**The outline is cheap.** A closed ring of points, optionally splined for curves.
+Rendering, hit-testing and area are standard geometry, and the corner-tapping
+machinery from the photo trace (D-015) already produces exactly this — going from
+four points to N is a smaller change than it sounds. `holes[]` covers the tree in
+the middle: a second ring, subtracted.
+
+**The interior is where the cost is**, and it is handled by clipping rather than
+by special-casing:
+
+> Lay a regular grid over the bed's **bounding box** in the bed's local space,
+> then clip every cell against `outline` minus `holes`. Each cell carries a
+> `coverage` fraction in 0…1.
+
+```
+GridCell { col, row, coverage }     // 1.0 interior, 0…1 at the boundary, 0 outside
+```
+
+- `coverage ≥ 0.85` — a full cell, full plant capacity.
+- `0.3 ≤ coverage < 0.85` — usable at reduced capacity: a 60%-covered cell fits
+  60% of `plantsPerCell`, rounded down.
+- `coverage < 0.3` — unusable; drawn as bed, not as planting space.
+
+The point of doing it this way is that **the grid stays a regular lattice.**
+Spacing validation, occupancy queries, capacity maths and yield-per-square-foot
+all keep working unchanged; the shape reaches them only as a per-cell number, and
+a rectangle is simply the case where every coverage is 1.0.
+
+`gridOrigin` and `gridRotation` are separate from the bed's own `rotation`
+because a bed set at an angle to the property line still wants its rows aligned
+to something deliberate — usually east–west for sun, not to the bed's edge.
+
+**Not modelled:** elevation. Terraced beds, hügelkultur mounds and slopes are
+real and are recorded in `soilNotes` and photos, not in geometry. Modelling
+terrain is a different application (D-020).
+
+### 4.2 Footprints — how a planting occupies a bed
+
+`layoutMode` ∈ `grid | free`, defaulting from `Bed.purpose`. This is the part
+that isn't only about shape:
+
+> **A square-foot grid is the wrong primitive for a native planting.**
+> Naturalistic and matrix planting is drifts, masses and repeats — flowing groups
+> of one species — not a lattice. Forcing a prairie border onto a 1 ft grid
+> doesn't approximate it badly; it describes something else entirely.
+
+So a Planting's footprint is a discriminated union, and all three modes reduce to
+an area, which is what every downstream query actually needs:
+
+```
+Footprint =
+  | { mode: 'cells',  cells: [{col,row}] }                    // annual veg
+  | { mode: 'drift',  ring: Ring, count, spacingMm }          // a mass of one variety
+  | { mode: 'point',  x, y, radiusMm }                        // one specimen
+```
+
+- **cells** — square-foot vegetable growing. Capacity from `plantsPerCell` ×
+  `coverage`.
+- **drift** — draw a blob, say how many go in it. Density is checked against
+  `spacingMm`, and the app can scatter *n* jittered positions inside the ring for
+  display rather than pretending they're on a grid.
+- **point** — a single shrub, tree or specimen perennial, whose `radiusMm` grows
+  with `currentSpreadMm` as it matures (§3).
+
+Occupancy (§3) is unchanged in shape: it asks which footprints cover a location
+at a date. It just now asks it of three footprint kinds instead of one.
 
 ### BedPhoto — the traced backdrop and the time-lapse
 ```
@@ -178,7 +261,7 @@ that a seed packet doesn't.
 ### Planting
 ```
 Planting { id, bedId, varietyId, seedPacketId?, seasonYear,
-           cells[] | { x, y, radiusMm },
+           footprint,                    // Footprint union — §4.2
            method,                       // directSow | transplant | purchasedStart
                                          // | bulbPlant | bareRoot | division
            plannedSowDate, plannedTransplantDate?,
