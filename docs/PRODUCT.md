@@ -235,8 +235,32 @@ Legend: **v1** = phases 0–5, the first useful year · **v2** = phases 6–10 �
 | Succession planting ("sow every 2 weeks × 5") | v2 |
 | Crop rotation warnings by family — annual beds only | v2 |
 | Bloom succession — find the gaps in the flowering calendar | v2 |
-| Companion / antagonist hints | v2 |
+| **Companion suggestions when placing a planting** | v1 |
+| **Antagonist warnings, on the same surface as rotation warnings** | v1 |
+| **Derived compatibility — shade, feeder competition, shared family, spacing** | v1 |
+| **Evidence tier shown on every recommendation, never hidden** | v1 |
+| **Filter: seeds I own · own but stale · don't own · already planted this season** | v1 |
+| Filter companions by native, lifecycle, and zone-appropriateness | v1 |
+| Missing companions feed the seed order list and vendor search | v2 |
+| `yourGarden` evidence tier — pairings from your own recorded history | v2 |
 | Multiple draft plans per season, side by side | backlog |
+
+> Companion planting has the worst signal-to-noise in the category. Some of it is
+> well supported — the Three Sisters, *Tagetes* against root-knot nematodes,
+> umbellifers feeding parasitoid wasps, juglone killing tomatoes. A lot of it
+> traces to one popular book from the 1970s and has never survived a trial. Every
+> other app ships both at the same confidence. We show the **tier** — `trial`,
+> `extension`, `traditional`, `yourGarden` — and the **mechanism**, on every
+> recommendation. And the most reliable advice turns out not to be a lookup table
+> at all: shading, feeder competition, shared-family pests and spacing conflicts
+> are all *computed* from catalog fields we already store (DATA_MODEL §4.3).
+
+> The ownership filter is what makes this actionable rather than aspirational. A
+> recommendation you can act on this weekend, because the packet is already in the
+> box, beats a better one you'd have to order and wait for. Four states: **have
+> it**, **have it but past viability**, **don't have it** — which feeds the order
+> list — and **already planted this season**, because if borage is in bed 2 and
+> the insectary radius reaches bed 3, you don't need more borage.
 
 ### 7.6 Tasks and reminders
 

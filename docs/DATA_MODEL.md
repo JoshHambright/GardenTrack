@@ -232,7 +232,7 @@ Variety { id, commonName, scientificName?, cultivar?, family, lifecycle,
           daysToMaturity?, dtmFrom,           // sow | transplant — see below
           spacingMm, matureSpreadMm?, matureHeightMm?, plantsPerCell?,
           hardinessZoneMin?, hardinessZoneMax?, heatZoneMax?,
-          sunRequirement, moisture, sowMethod, frostTolerance,
+          genus?, feederClass, sunRequirement, moisture, sowMethod, frostTolerance,
           bloomStartMonth?, bloomEndMonth?,   // natives & perennials
           nativeToRegionIds[],                // from USDA PLANTS + curation
           pollinatorValue?, hostGenera[],     // what larvae eat it
@@ -248,6 +248,9 @@ Variety { id, commonName, scientificName?, cultivar?, family, lifecycle,
   hardest to source cleanly — see D-012.
 - `seedLongevityYears` lives here, not on the packet: viability is a property of
   the species (onion 1, tomato 4–6, cucumber 5–10) applied to a packet's age.
+- `feederClass` ∈ `heavy | moderate | light | fixer`. Small field, large payoff —
+  it makes the most reliable companion advice computable rather than looked up
+  (§4.3).
 
 ### SeedPacket
 ```
@@ -328,6 +331,86 @@ VendorListing { id, vendorId, varietyId?, matchConfidence,
 `varietyId` is nullable and `matchConfidence` exists because vendor product
 titles are free text — "Cherokee Purple" vs "Tomato, Cherokee Purple (OP)" — and
 pretending that match is exact would corrupt the catalog.
+
+### 4.3 Companion planting
+
+Two things have to be right here, and neither is the lookup table everyone
+expects.
+
+**First: most of what circulates as companion planting is unverified.** Some of
+it is well supported — the Three Sisters, *Tagetes patula* suppressing root-knot
+nematodes, umbellifers and asters feeding parasitoid wasps and hoverflies, trap
+cropping squash bugs onto blue hubbard, juglone from black walnut killing
+tomatoes. Some of it traces to a single popular book from the 1970s and has never
+survived a trial. Shipping both at the same confidence, as nearly every garden app
+does, is the actual failure — so **evidence tier is a required field and is always
+visible in the UI** (D-021).
+
+**Second: the most reliable advice isn't a table at all — it's arithmetic over
+attributes we already store.**
+
+```
+derived(a, b) =
+    shading      : a.matureHeightMm shades b given bed aspect and b.sunRequirement
+    competition  : a.feederClass = heavy AND b.feederClass = heavy, adjacent
+    enrichment   : a.feederClass = fixer preceding or beside b = heavy
+    sharedPest   : a.family = b.family   → same pests, same diseases, adjacent
+    spacing      : a.matureSpreadMm + b.matureSpreadMm > gap between them
+```
+
+Every one of those is computed from fields the catalog already has, carries no
+folklore risk, and is more useful than most of the table. `sharedPest` is the same
+derivation as crop rotation seen sideways: rotation is one family in one *place*
+across *years*; shared pest is one family in *adjacent* places in one *season*.
+
+#### The relationship table
+
+```
+CompanionRelation {
+  id, subjectTaxon, objectTaxon,        // TaxonRef — see below
+  polarity,                             // beneficial | antagonistic
+  mechanism, evidenceTier,
+  concurrency,                          // concurrent | sequential
+  radiusMm,                             // from the mechanism, not the pair
+  effectSize?, source, notes
+}
+
+TaxonRef = { rank: 'family'|'genus'|'species'|'variety', id }
+```
+
+- **Relations are between taxa, not varieties.** The claim is "tomatoes and
+  basil," not "Cherokee Purple and Genovese." Resolution walks *up* — variety →
+  species → genus → family — and stops at the first match. Storing this per
+  variety would be both wrong and enormous.
+- `mechanism` ∈ `nitrogenFixation | structuralSupport | nurseShade | livingMulch |
+  pestRepellent | trapCrop | beneficialInsectary | nematodeSuppression |
+  pollinatorAttraction | allelopathy | resourceCompetition | sharedPestOrDisease`
+- `evidenceTier` ∈ `trial | extension | traditional | yourGarden` (D-021).
+- **`radiusMm` belongs to the mechanism, not to the pair.** Allelopathy is a root
+  zone measured in metres. A trap crop must be near but explicitly *not* adjacent.
+  An insectary planting works at insect flight distance — tens of metres — which
+  means **it crosses bed boundaries**, and the evaluation query is therefore over
+  the site, not over one bed.
+- `concurrency` distinguishes companions from sequences. Spring peas feeding the
+  squash that follows them is a *sequential* relation and only makes sense because
+  plantings are time-ranged (D-003). Folk tables cannot express this at all.
+
+#### Evaluation
+
+A candidate placement is scored against every planting whose footprint falls
+within the mechanism's radius **and** whose date range overlaps (or, for
+sequential relations, immediately precedes) it. Antagonistic results surface as
+planner warnings on the same path as rotation warnings; beneficial ones surface as
+suggestions.
+
+#### `yourGarden` — the honest tier
+
+Once several seasons are recorded, the app can observe that two things were
+planted adjacent twice and note how they did. This is the tier that ties companion
+planting to the variety verdicts, and it is also the one most easily oversold: two
+observations, no control plot, and weather confounding everything is **a reason to
+pay attention, not a finding.** The UI must say so — sample size shown, never
+promoted above `extension`, never stated as a cause.
 
 ### VarietyVerdict
 ```

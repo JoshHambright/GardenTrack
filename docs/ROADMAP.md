@@ -96,9 +96,15 @@ filtered by hardiness zone, sun, moisture, lifecycle, and **native to my region*
 at the strictness the user chose. Custom varieties. Seed inventory: packets,
 bulbs, tubers and bare root, with computed viability from species longevity.
 
+The **companion relation table** is built here alongside the catalog, keyed on
+taxa rather than varieties, with an evidence tier and mechanism required on every
+row (D-021). Sourcing the well-supported relations is a small research job; the
+folklore is easy to find and gets tiered honestly rather than dropped.
+
 **Exit:** a zone-and-region-filtered browse that returns a genuinely useful
-native perennial shortlist for Josh's actual location, and his seed box entered
-with correct viability flags.
+native perennial shortlist for Josh's actual location; his seed box entered with
+correct viability flags; and no companion relation in the table without a
+mechanism, a tier and a source.
 
 ---
 
@@ -113,12 +119,25 @@ reserved year-round through dormancy, the planner refusing to place over them
 (D-013). Mature-spread projection so a shrub's footprint is a function of its
 age. The bed occupancy timeline. Copy a previous season as a starting point.
 
+**Companion evaluation** (DATA_MODEL §4.3): placing a planting scores it against
+neighbours within each mechanism's radius and overlapping it in time — beneficial
+results as suggestions, antagonistic as warnings on the same surface rotation
+warnings will use. Suggestions filter by what's in the seed box: own it, own it
+but stale, don't own it, already planted this season. Derived compatibility —
+shading, feeder competition, shared-family pests, spacing — ships here too, and
+needs no relation table at all.
+
+Note the insectary radius crosses bed boundaries, so this query is over the site,
+not over one bed.
+
 This is the phase where the app first does something a spreadsheet can't.
 
 **Exit:** a complete plan for one real season, every date derived; the occupancy
 timeline correctly shows a bed turning over mid-summer; a drift of *Liatris* in a
-curved border is plannable without a grid cell anywhere in sight; and the planner
-refuses to put lettuce on top of a dormant coneflower in March.
+curved border is plannable without a grid cell anywhere in sight; the planner
+refuses to put lettuce on top of a dormant coneflower in March; and a companion
+suggestion filtered to "seeds I already own" returns something Josh can act on
+that weekend, with its evidence tier on the face of it.
 
 ---
 
@@ -172,7 +191,9 @@ degrading to deep links for the rest, with the app still fully usable offline.
 ## Phase 7 — History, analysis, and the bed time-lapse
 
 Per-bed history across years. Yield per bed, per square foot, per variety.
-Variety verdicts, prompted at end of season. Rotation heatmap by family, feeding
+Variety verdicts, prompted at end of season. The **`yourGarden` evidence tier**:
+pairings the record has actually seen, with sample size shown, never promoted
+above `extension`, and never phrased as a cause (D-021). Rotation heatmap by family, feeding
 warnings back into Phase 3 — annual beds only. Bloom-succession analysis: where
 are the gaps in the flowering calendar. **The bed photo time-lapse**: every shot
 from a bed's photo point, aligned and scrubbable across a season and across

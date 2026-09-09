@@ -336,3 +336,60 @@ vegetable grid would fail at the thing we said the product was for.
 mounds and slopes are recorded in `soilNotes` and photos. Geometry stays 2D;
 modelling terrain is a different application.
 **Status:** ✅ Accepted
+
+---
+
+### D-021 · Companion planting carries an evidence tier and a mechanism, always visible
+**Chose:** Every `CompanionRelation` requires `evidenceTier` ∈ `trial |
+extension | traditional | yourGarden`, a named `mechanism`, and a `source`. The
+tier is shown in the UI on every recommendation; it is never collapsed into an
+undifferentiated "companions" list.
+**Why:** Most circulating companion-planting advice is untested. Some is well
+supported — the Three Sisters, *Tagetes patula* against root-knot nematodes,
+umbellifers and asters provisioning parasitoid wasps and hoverflies, trap cropping
+squash bugs onto blue hubbard, juglone from black walnut. A great deal of the rest
+traces to one popular book from the 1970s and has never survived a replicated
+trial. Presenting both at equal confidence — which is what essentially every
+garden app does — is the actual failure mode, and it's a failure of honesty rather
+than of data.
+
+Recording the *mechanism* matters as much as the tier, because a mechanism
+generalises and a pairing doesn't. "Legumes fix nitrogen for heavy feeders" tells
+you what to do with a plant that isn't in the table; "beans like corn" doesn't.
+**Costs:** Sourcing tiers is real research per relation, so the table starts small.
+That's the right trade — a hundred sourced relations beat a thousand copied ones,
+and "we don't have data on this pairing" is a legitimate answer.
+**On `yourGarden`:** two adjacent plantings over two seasons with no control plot
+and weather confounding everything is a reason to look closer, not a finding. It
+is shown with its sample size, never ranked above `extension`, and never phrased
+causally.
+**Status:** ✅ Accepted
+
+---
+
+### D-022 · Companion relations are taxon-level edges evaluated in space and time
+**Chose:** Relations are stored between **taxa** (`family | genus | species |
+variety`) and resolved by walking up from a variety to the first match.
+`radiusMm` is a property of the **mechanism**, not the pair. Evaluation matches
+neighbours within that radius whose date ranges overlap — or, for `sequential`
+relations, immediately precede.
+**Why:** The claim is "tomatoes and basil," not "Cherokee Purple and Genovese."
+Per-variety storage would be both wrong and combinatorially enormous.
+
+Radius on the mechanism because the distances genuinely differ by kind:
+allelopathy is a root zone in metres, a trap crop must be near but deliberately
+*not* adjacent, and an insectary planting works at insect flight distance — tens
+of metres. **That last one crosses bed boundaries, so the evaluation query is over
+the site, not over one bed**, which is worth knowing before the query is written.
+
+Time matters because plantings are time-ranged (D-003). Two things only interact
+if they overlap, and spring peas feeding the squash that follows them is a
+*sequential* relation — something a folk companion table cannot express at all.
+**Costs:** Taxon resolution needs `genus` on Variety and a walk-up lookup. Cheap.
+The site-wide radius query needs a spatial index once bed counts grow; irrelevant
+at 4–20 beds.
+**Free half:** shading, heavy-feeder competition, shared-family pests and spacing
+conflicts are computed from `matureHeightMm`, `feederClass`, `family` and
+`matureSpreadMm` — no relation table, no folklore risk, and more reliable than
+most of the table. `feederClass` is a new field on Variety and is the whole cost.
+**Status:** ✅ Accepted
