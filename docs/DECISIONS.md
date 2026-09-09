@@ -485,3 +485,50 @@ parallel under a length edit is enough, and it's a rule set rather than a solver
 an offset drag or a callout, and this is a phone-tier problem specifically — the
 tablet has room, which is another reason the editor is designed there (D-018).
 **Status:** ✅ Accepted
+
+---
+
+### D-025 · Keep a paid tier possible; don't design for one yet
+**Chose:** Record three constraints that keep a future paid tier open, and defer
+every pricing and packaging question until sync (Phase 11) is actually in sight.
+
+**Why the option is cheap to keep.** Local-first (D-002) has already drawn the
+line in the right place. The features that cost real money to operate — sync,
+cloud photo backup, the vendor sourcing proxy (D-014), share-link hosting, push
+notifications, weather — are precisely the ones that need a server. Everything
+else runs on the device: planning, logging, the light field (D-023), companion
+evaluation (D-022), the whole catalog. A free tier is therefore not a hobbled
+edition of a paid product; it is the entire application minus the network. Very
+few apps get that boundary for free, and it should not be spent.
+
+**The three constraints, which are decisions and not sentiments:**
+
+1. **Never hold the gardener's data hostage.** JSON export ships free in Phase 5
+   and stays free permanently. If a subscription ever lapses, the local app keeps
+   working in full — you lose sync, not your garden. This has to be settled now
+   because it rules out designs where records live only server-side.
+2. **No entitlement checks in the domain layer.** Gating happens at the service
+   boundary — sync, sourcing, sharing, push — and the domain package has no
+   concept of a subscription. If premium logic leaks into the core, the free app
+   becomes a deliberately degraded paid app and the two can never be cleanly
+   separated again.
+3. **Accounts arrive with sync, not before.** The model still has no users
+   (DATA_MODEL §7). Adding auth early "for later monetisation" is speculative work
+   with no v1 payoff that would compromise the local-first property to buy nothing.
+
+**One technical consequence worth knowing now:** photos are ~95% of the bytes, so
+they are the cost driver for any hosted tier. That means the sync protocol must
+treat large blobs separately from records — resumable, deduplicated, and
+independently quota-able — rather than syncing photos as just more rows. It is
+the one place where a pricing question genuinely reaches back into the protocol.
+
+**The honest warning.** Designing for a business that may never exist distorts
+architecture in ways that hurt if it doesn't. And if this ever stops being a
+personal project, several things change posture rather than scale: the vendor
+adapters in particular. Scraping independent seed houses on your own behalf is one
+thing; doing it on behalf of paying customers is a different relationship, and
+D-014's conduct rules would need renegotiating as actual agreements — affiliate
+arrangements or nothing. The bundled plant catalog's regional scope, support
+burden, and data-protection obligations all shift too.
+
+**Status:** ✅ Accepted as a constraint set · pricing and packaging ❔ deferred

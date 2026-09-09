@@ -372,7 +372,22 @@ Legend: **v1** = phases 0–6, the first useful year · **v2** = phases 7–11 �
 | **Desktop shell — three-pane, keyboard shortcuts, hover, bulk edit** | v2 |
 | Print stylesheets | v2 |
 | Unit switching (imperial / metric) | v1 |
-| Sync across devices, accounts and auth | v2 |
+| Sync across devices, accounts and auth | v2 (Phase 11) |
+| Cloud photo backup | v2 |
+| Partner / family edit access | v2 |
+| A paid tier covering the server-side features | **deferred — D-025** |
+
+> **On a premium tier.** The architecture already draws the line, and honestly:
+> everything that costs money to run is exactly the part that needs a server —
+> sync, cloud photo backup, the vendor sourcing proxy, share-link hosting, push,
+> weather. Everything else — planning, logging, the light computation, companion
+> evaluation, the whole catalog — runs on the device and costs nothing to serve.
+> So a free tier isn't a crippled version of a paid one; it's the entire
+> application minus the network. That's a rare position to be in and it's worth
+> not squandering.
+>
+> Three constraints are recorded now so the option stays open, and the pricing
+> decision itself is deliberately **not** being made yet (D-025).
 
 ## 8. Open questions
 
