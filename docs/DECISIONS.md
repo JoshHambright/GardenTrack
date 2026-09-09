@@ -431,3 +431,57 @@ same warning surface.
 elevation is out of scope for the same reason it is for beds (D-020). A north
 slope gets a site note, not a heightmap.
 **Status:** ✅ Accepted
+
+---
+
+### D-024 · Measurement capture that looks like drawing
+**Chose:** The bed and site editor is designed as a **dimension-capture tool**,
+not a drawing app. Assists, in the order they earn their cost:
+
+| Assist | Cost | Why it matters |
+|---|---|---|
+| **Snap to grid** (6″ / 1′ / 10 cm, per ring) | trivial | vertices land on round numbers |
+| **Snap to angle** (15° / 45° / 90°) | trivial | an L-bed comes out *square*, not 88° |
+| **Editable edge lengths** | small | draw roughly, tap the edge, type `8'`, geometry solves |
+| **Bed templates** (4×8, 4×4, 2×8, L, keyhole) | small | most raised beds are standard; start from a shape |
+| **Snap to existing geometry** | small | parallel beds and constant path widths, which is how beds are actually placed |
+| **Stroke simplification** (Ramer–Douglas–Peucker) | small | a freehand stroke becomes a few clean points |
+| **Spline fitting** through simplified points | moderate | genuinely curved borders; `Ring.curved` already carries it (D-019) |
+| **Photo tracing** | already built | D-015 — the strongest assist of all |
+| Shape recognition (offer, never auto-replace) | moderate | v2 |
+| Full parametric constraints | large | **cut** |
+
+**Why:** "I can't draw" is usually not a motor-skill problem — it's that a
+freehand outline carries no dimensions, and Phase 3's spacing, capacity and
+coverage maths need real ones. Reframing the tool as measurement capture settles
+the design questions: an editable edge length beats a better brush, because the
+number is the deliverable and the picture is the interface to it.
+
+The single biggest assist is one we already built for another reason. Tracing the
+rectified overhead photo (D-015) means you are not drawing from imagination at
+all — you are outlining something visible, which almost anyone can do.
+
+**Different tools, different assists.** The three things you draw have genuinely
+different accuracy needs:
+
+- **Beds** — dimensions are load-bearing. Snap hard, offer numbers, template first.
+- **Obstructions** — position and height matter, outline barely does. A tree is a
+  circle. Low precision is fine.
+- **Drifts** — **no snapping at all.** A drift is a blob by nature; snapping one to
+  a grid would misrepresent it and imply a precision that isn't real (D-020).
+
+**Costs:** Three snapping behaviours to keep straight, and stroke smoothing has a
+feel that can only be tuned against real hands on real glass — which is what Spike
+A is for, with a measured exit criterion: how close does a hand-drawn 4×8 bed
+actually land to 4×8.
+
+**Cut: full parametric constraints.** A real constraint solver — "this edge stays
+perpendicular to that one, this gap stays 24″ under edit" — is a genuine rabbit
+hole and lands somewhere between a weekend and a quarter depending on how honest
+you are about degenerate cases. Rectangles staying rectangles and parallel staying
+parallel under a length edit is enough, and it's a rule set rather than a solver.
+
+**Touch caveat:** the finger occludes the thing being dragged. Vertex handles need
+an offset drag or a callout, and this is a phone-tier problem specifically — the
+tablet has room, which is another reason the editor is designed there (D-018).
+**Status:** ✅ Accepted

@@ -181,6 +181,28 @@ to something deliberate — usually east–west for sun, not to the bed's edge.
 real and are recorded in `soilNotes` and photos, not in geometry. Modelling
 terrain is a different application (D-020).
 
+### 4.1b Drawing assists
+
+Beds are geometry, and the gardener drawing them is not a draughtsman. The
+assists that make this work are cheap, and they are worth naming in the model
+because two of them change what gets *stored*.
+
+**Numeric entry is a peer of drawing, not a fallback.** Half of "I can't draw" is
+really "I know it's 4 by 8, let me just say so." So every edge of a bed carries an
+editable length; tap it, type `8'`, and the geometry solves. Rough-then-refine is
+the intended order, and a blobby bed is legitimately usable before any refinement.
+
+**Snapping is per-tool, and the drift tool deliberately has none.** Snapping a
+naturalistic drift to a grid would be actively wrong — a drift is a blob by
+nature, and false precision misrepresents it (D-024).
+
+```
+Ring { points, curved, snapIncrementMm?, angleSnapDeg? }   // per-ring, remembered
+```
+
+The snap settings live on the ring so redrawing a bed a year later behaves the
+way it did the first time.
+
 ### 4.2 Footprints — how a planting occupies a bed
 
 `layoutMode` ∈ `grid | free`, defaulting from `Bed.purpose`. This is the part

@@ -170,6 +170,16 @@ Legend: **v1** = phases 0–6, the first useful year · **v2** = phases 7–11 �
 | **Partial cells at a curved or angled edge, at pro-rata capacity** | v1 |
 | Grid rotation independent of the bed's own angle | v1 |
 | **Photo-traced beds — shoot a bed, tap its corners, plan on the rectified image** | v1 |
+| **Snap to grid, and snap to angle so an L-bed comes out square** | v1 |
+| **Editable edge lengths — draw roughly, then type `8'` and the shape solves** | v1 |
+| **Bed templates — 4×8, 4×4, 2×8, L, keyhole — start from a shape, not a blank** | v1 |
+| **Freehand smoothing for curved beds and drifts; no snapping on drifts** | v1 |
+| Snap to existing geometry — parallel beds, constant path widths | v1 |
+| Non-destructive vertex handles; nothing committed by the stroke | v1 |
+| Imported aerial or satellite screenshot as a site backdrop to trace | v2 |
+| Shape recognition — a rough stroke offers to become a rectangle | v2 |
+| Tape-measure entry — "8ft north, 4ft east, close" | backlog |
+| Full parametric constraints | cut (D-024) |
 | Containers, greenhouse, cold frame, border, mound as bed types | v1 |
 | **Obstructions — house, fence, shed, trees — as rings with a height** | v1 |
 | **Painted light — shade cells by hand, per season window** | v1 |
@@ -268,6 +278,13 @@ Legend: **v1** = phases 0–6, the first useful year · **v2** = phases 7–11 �
 > it**, **have it but past viability**, **don't have it** — which feeds the order
 > list — and **already planted this season**, because if borage is in bed 2 and
 > the insectary radius reaches bed 3, you don't need more borage.
+
+> The drawing tools are not a drawing app — they are **measurement capture that
+> looks like drawing**. The output has to be dimensionally right, not pretty,
+> because Phase 3's spacing and capacity maths depend on it. That's why an
+> editable edge length beats a better brush, and why the three things you draw get
+> three different sets of assists: beds snap hard, obstructions barely need to,
+> and drifts don't snap at all (D-024).
 
 > A single "hours of sun" number on a bed is wrong three ways at once: spatially,
 > because a fence shades one edge; across the day, because six hours of morning sun

@@ -62,14 +62,20 @@ A published page opened on Josh's actual phone. Two things to prove:
    what has to change.
 2. Draw a **drift** in a curved bed and place a specimen shrub, since native beds
    don't use the grid at all (D-020). Two layout interactions, one canvas.
-3. Photograph a real bed, tap its corners, enter one edge length, and see
+4. Photograph a real bed, tap its corners, enter one edge length, and see
    whether the rectified top-down image is *good enough to plan on* — including
    from a normal standing-height shot, not just from a ladder.
 
+3. **Draw without drawing skill.** Snap to grid and to angle, edge lengths as
+   editable chips, standard bed templates, freehand smoothing for drifts, and
+   tracing over the rectified photo. The test is whether someone who cannot draw
+   produces a bed that is *dimensionally correct* (D-024).
+
 **Exit:** an approved interaction, plus a written note on what it proved — which
 gestures work, what cell size is thumb-reachable, whether grid and drift editing
-can share one canvas without a mode switch that confuses, and what camera angle
-the homography needs before the result stops being usable.
+can share one canvas without a mode switch that confuses, what camera angle the
+homography needs before the result stops being usable, and — measured, not
+guessed — how close a hand-drawn 4×8 bed lands to 4×8 with the assists on.
 
 ---
 
@@ -80,13 +86,18 @@ Create, edit, archive beds as **outlines** — straight-edged or curved, with ho
 for the tree in the middle (D-019) — each with a `kind` and a `purpose`. The
 polygon clipper and the per-cell `coverage` calculation. **Obstructions** — house,
 fence, shed, trees — drawn as rings with a height, since they're the same geometry
-code and cost almost nothing to add while it's being written (D-023). The map: beds laid out
+code and cost almost nothing to add while it's being written (D-023).
+
+The **drawing assists** proven in Spike A ship here: grid and angle snapping,
+snapping to existing geometry for parallel beds and constant path widths, editable
+edge lengths, bed templates, freehand smoothing, and photo tracing (D-024). The map: beds laid out
 spatially, pan/zoom, tap to select. Bed detail with its grid, over the traced
 photo where one exists.
 
 **Exit:** Josh's real garden is entered — including at least one bed that isn't a
 rectangle — and the map is recognisable as his garden on a phone held outdoors in
-sunlight. Partial cells at a curved edge report sane capacity.
+sunlight, with bed dimensions accurate enough that Phase 3's spacing maths can be
+trusted. Partial cells at a curved edge report sane capacity.
 
 ---
 
