@@ -125,7 +125,7 @@ Bed { id, siteId, name, kind, purpose, layoutMode,
       outline: Ring, holes: Ring[],        // see §4.1
       x, y, rotation,
       gridCellMm, gridOrigin, gridRotation,
-      soilNotes?, sunHours?, photoPointId?, archivedAt? }
+      soilNotes?, photoPointId?, archivedAt? }
 
 Ring = { points: [{x, y}], curved: boolean }   // closed; curved ⇒ spline through points
 ```
@@ -411,6 +411,86 @@ planting to the variety verdicts, and it is also the one most easily oversold: t
 observations, no control plot, and weather confounding everything is **a reason to
 pay attention, not a finding.** The UI must say so — sample size shown, never
 promoted above `extension`, never stated as a cause.
+
+### 4.4 Light
+
+Sun is the input gardeners get most wrong and apps model most crudely. A single
+`sunHours` number on a bed is wrong in three directions at once, so there isn't
+one:
+
+- **Wrong spatially.** A bed against a fence has a shaded strip along one edge. A
+  bed at the drip line of a maple is full sun at one end and dappled at the other.
+  "Part of a bed" is the natural unit, not the bed.
+- **Wrong across the day.** Six hours of morning sun and six hours of afternoon
+  sun are not the same six hours. Afternoon sun is hotter and harsher; lettuce,
+  spinach and most woodland natives want morning sun *and* afternoon shade.
+  Collapsing to one number throws away the most actionable part.
+- **Wrong across the year.** The bed that is full sun in early May is half shaded
+  by August — the sun drops in the sky and the deciduous canopy that wasn't there
+  in April now is. This is the single thing gardeners most consistently misjudge,
+  and it's the reason a spring plan fails in July.
+
+So light is a **field over the site**, sampled on a regular lattice independent of
+any bed's grid — because perennial and native beds use drifts, not cells (§4.2),
+and still need to know what the sun is doing.
+
+```
+Obstruction { id, siteId, kind, outline: Ring, heightMm,
+              opacity,                       // 0 = solid, ~0.2–0.4 = deciduous canopy
+              leafOutMonth?, leafDropMonth?, // deciduous: two obstructions, one object
+              archivedAt? }
+
+LightSample { siteId, x, y, monthOfYear,
+              morningHours, afternoonHours, source }
+```
+
+- `kind` ∈ `building | fence | wall | shed | tree | shrub | structure`.
+- Obstructions are **rings with a height** — the same geometry as beds (D-019),
+  which is why they cost so little to add.
+- `opacity` gives dappled shade a truthful value. A deciduous canopy in leaf
+  passes light; a shed does not.
+
+#### Three sources, one field
+
+`LightSample.source` ∈ `painted | computed | observed`, and they are not equal:
+
+| Source | How | Durability |
+|---|---|---|
+| `painted` | the gardener shades cells by hand, per season window | **user-authored — durable, never overwritten** |
+| `computed` | solar position + shadow projection from obstructions | **a cache — recompute whenever obstructions change** |
+| `observed` | a guided task pings hourly on a sunny day; you tap sun or shade per bed | user-authored, durable |
+
+The distinction matters for storage: computed samples are derived data and should
+never be treated as truth to be migrated. Painted and observed samples are the
+gardener's own record and must survive everything.
+
+#### The computation
+
+Solar azimuth and altitude come from latitude, longitude and timestamp — a
+well-documented closed-form algorithm, pure arithmetic, no network. Project each
+obstruction's outline along the solar vector at its height, test lattice points
+for containment, and integrate over the daylight hours of the chosen day, keeping
+morning and afternoon separately.
+
+It is entirely offline, entirely deterministic, and belongs in the domain package
+with the scheduling arithmetic — some of the most testable code in the app.
+
+**Not modelled:** terrain. Slope and aspect genuinely affect light, and modelling
+elevation is out of scope for the same reason it is for beds (D-020). A garden on
+a north slope gets a site-level note, not a heightmap.
+
+#### What it's for
+
+A light map that doesn't change a decision is a toy. It feeds four:
+
+1. **Placement warnings** — `Variety.sunRequirement` against the cells actually
+   chosen. Third consumer of the warning surface, after rotation and companions.
+2. **Placement suggestions** — "these cells get 4h, morning-weighted; here's what
+   suits," filtered through the seed box exactly like companion suggestions.
+3. **Explaining history** — the fall lettuce that bolted was in the spot that got
+   nine hours in July. This is the "history that pays off" principle applied to
+   the one variable nobody records.
+4. **Siting a new bed** — where in this yard is there six hours in August.
 
 ### VarietyVerdict
 ```

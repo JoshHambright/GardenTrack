@@ -393,3 +393,41 @@ conflicts are computed from `matureHeightMm`, `feederClass`, `family` and
 `matureSpreadMm` — no relation table, no folklore risk, and more reliable than
 most of the table. `feederClass` is a new field on Variety and is the whole cost.
 **Status:** ✅ Accepted
+
+---
+
+### D-023 · Light is a computed field over the site, not a number on a bed
+**Chose:** No `sunHours` on Bed. Light is a `LightSample` lattice over the whole
+site, indexed by position and month, keeping **morning and afternoon hours
+separate**. It comes from three sources — `painted` by hand, `computed` from solar
+position and obstruction shadows, `observed` via a guided hourly task — and
+computed samples are a **cache**, recomputed whenever an obstruction changes,
+while painted and observed samples are the gardener's own record and are never
+overwritten.
+**Why:** A single number per bed is wrong in three independent directions.
+Spatially, because a fence shades one edge and a tree dapples one end — "part of a
+bed" is the natural unit, which is what prompted this. Across the day, because six
+hours of morning sun and six of afternoon sun are not interchangeable; morning sun
+with afternoon shade is what lettuce, spinach and most woodland natives actually
+want, and collapsing to one number discards the most actionable part. Across the
+year, because the bed that is full sun in early May is half shaded by August once
+the sun has dropped and the deciduous canopy has filled in — the single thing
+gardeners most consistently misjudge, and the reason a spring plan fails in July.
+
+A site-wide lattice rather than per-bed cells because perennial and native beds
+use drifts, not grid cells (D-020), and still need to know what the sun is doing.
+This is the same conclusion the companion insectary radius reached (D-022): the
+interesting queries are over the site.
+**Costs:** Obstructions to draw — though they are rings with a height, the same
+geometry as beds (D-019), so they're nearly free to add while that editor is being
+written. The computation itself is a closed-form solar position algorithm plus 2D
+shadow projection: pure, deterministic, offline, no dependencies, and some of the
+most testable code in the app. Storage is bounded by lattice resolution and is a
+cache, so it can be evicted.
+**Sequencing:** painted light ships with the planner in Phase 3 so sun warnings
+exist from the start; Phase 4 replaces the painting with computation behind the
+same warning surface.
+**Not modelled:** terrain. Slope and aspect really do affect light, but modelling
+elevation is out of scope for the same reason it is for beds (D-020). A north
+slope gets a site note, not a heightmap.
+**Status:** ✅ Accepted

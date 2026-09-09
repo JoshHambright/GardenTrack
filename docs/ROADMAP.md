@@ -29,7 +29,7 @@ editor is the one deliberate exception, designed at landscape tablet.
   don't have yet. Phase 2 starts with a hard look at what USDA PLANTS actually
   gives us and how much hand-curation the gap costs (D-012).
 
-**Phase order follows the season, not just dependency.** Phases 0–5 make a tool
+**Phase order follows the season, not just dependency.** Phases 0–6 make a tool
 that's useful for one full year. Winter starts land after the in-season log even
 though they happen earlier in the calendar, because you can't plan starts well
 without last season's record.
@@ -78,7 +78,9 @@ the homography needs before the result stops being usable.
 Site with its four geographic facts (DATA_MODEL §2) resolved from a location.
 Create, edit, archive beds as **outlines** — straight-edged or curved, with holes
 for the tree in the middle (D-019) — each with a `kind` and a `purpose`. The
-polygon clipper and the per-cell `coverage` calculation. The map: beds laid out
+polygon clipper and the per-cell `coverage` calculation. **Obstructions** — house,
+fence, shed, trees — drawn as rings with a height, since they're the same geometry
+code and cost almost nothing to add while it's being written (D-023). The map: beds laid out
 spatially, pan/zoom, tap to select. Bed detail with its grid, over the traced
 photo where one exists.
 
@@ -119,6 +121,11 @@ reserved year-round through dormancy, the planner refusing to place over them
 (D-013). Mature-spread projection so a shrub's footprint is a function of its
 age. The bed occupancy timeline. Copy a previous season as a starting point.
 
+**Painted light**: shade cells by hand — full sun, part sun, part shade, full
+shade — per season window, and get sun-requirement warnings from it. Phase 4
+replaces the painting with computation; the warning surface is the same either
+way (D-023).
+
 **Companion evaluation** (DATA_MODEL §4.3): placing a planting scores it against
 neighbours within each mechanism's radius and overlapping it in time — beneficial
 results as suggestions, antagonistic as warnings on the same surface rotation
@@ -141,7 +148,34 @@ that weekend, with its evidence tier on the face of it.
 
 ---
 
-## Phase 4 — The in-season log
+## Phase 4 — Light and shade
+
+*Goal: stop guessing which corner gets six hours.*
+
+Phase 3 ships with light **painted by hand** — you shade cells full sun through
+full shade, per season window. This phase replaces the guess with arithmetic.
+
+Draw the things that cast shadows — house, fence, shed, trees — as rings with a
+height, on the same site map and with the same geometry code as beds (D-023).
+Solar position from latitude, longitude and date; shadows projected onto a
+site-wide light lattice; direct-sun hours per point per day, **split into morning
+and afternoon**, for any day of the year. Deciduous trees leaf out and drop, so
+the same maple is two different obstructions in April and July.
+
+Then feed it back into the planner: sun-requirement warnings become real rather
+than hand-declared, and "what tolerates 4 hours of morning sun" becomes a
+suggestion filtered through the seed box, exactly like companions.
+
+Pure, offline, no dependencies, no network — it belongs in the domain package and
+is some of the most testable code in the app.
+
+**Exit:** the computed light map for Josh's garden matches what he observes on a
+real sunny day, including the seasonal shift; and the planner warns when a
+full-sun crop is placed somewhere that gets four hours in August.
+
+---
+
+## Phase 5 — The in-season log
 
 Planting lifecycle transitions. Harvest logging on the shortest possible path —
 designed to a tap count, not a feature list. Photos, including shots from a bed's
@@ -153,24 +187,24 @@ offline, one-handed.
 
 ---
 
-## Phase 5 — Tasks and reminders
+## Phase 6 — Tasks and reminders
 
 One-off, recurring, and **derived** tasks — the third generated from plantings by
 the same date engine (D-016). Today / this week / overdue views, which become the
 app's in-season home screen. Snooze and dismiss from the start. Notification
 config: which categories notify, lead time, quiet hours, digest versus per-task.
-`weatherSkip` reserved in the schema, behaviour deferred to Phase 9 (D-017).
+`weatherSkip` reserved in the schema, behaviour deferred to Phase 10 (D-017).
 
 **Exit:** a week of real tasks arrives correctly — including at least one derived
 task the app knew about and Josh didn't — with notifications firing on a phone
 with the app closed.
 
-> **Phases 0–5 are a genuinely useful app for a full year.** Everything after
+> **Phases 0–6 are a genuinely useful app for a full year.** Everything after
 > this compounds on the record they produce.
 
 ---
 
-## Phase 6 — Winter starts, succession, and sourcing
+## Phase 7 — Winter starts, succession, and sourcing
 
 Seed-starting calendar computed backward from transplant dates. Trays and cells,
 germination rate per sowing, hardening-off. Succession as one action generating a
@@ -188,7 +222,7 @@ degrading to deep links for the rest, with the app still fully usable offline.
 
 ---
 
-## Phase 7 — History, analysis, and the bed time-lapse
+## Phase 8 — History, analysis, and the bed time-lapse
 
 Per-bed history across years. Yield per bed, per square foot, per variety.
 Variety verdicts, prompted at end of season. The **`yourGarden` evidence tier**:
@@ -205,10 +239,10 @@ season in one gesture.
 
 ---
 
-## Phase 8 — Sharing and output
+## Phase 9 — Sharing and output
 
 Printable season plan. QR bed stakes that deep-link to a bed. Read-only share
-links for a season or a bed. Extends the Phase 6 server rather than introducing
+links for a season or a bed. Extends the Phase 7 server rather than introducing
 a new one; scope is deliberately the smallest thing that publishes a snapshot.
 
 **Exit:** a stake in the ground, scanned with a phone camera, opens that bed; and
@@ -216,7 +250,7 @@ a link sent to someone without the app shows them the season.
 
 ---
 
-## Phase 9 — Environment and research
+## Phase 10 — Environment and research
 
 Weather: frost warnings, rainfall, growing-degree-days per planting, and the
 `weatherSkip` behaviour that makes watering reminders trustworthy. Pest and
@@ -228,7 +262,7 @@ reminder correctly suppresses itself after real rain.
 
 ---
 
-## Phase 10 — Sync and multi-user
+## Phase 11 — Sync and multi-user
 
 Accounts, and field-level last-write-wins sync against the `id` / `updatedAt` /
 `deletedAt` discipline from DATA_MODEL §6. Partner edit access.

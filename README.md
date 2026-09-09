@@ -11,7 +11,7 @@ Mobile-first, local-first, offline by default. The garden has no signal.
 |---|---|
 | [docs/PRODUCT.md](docs/PRODUCT.md) | What this is, the principles, the device tiers, the full feature inventory |
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | The domain model — **read before the roadmap** |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Eleven phases, each with an exit criterion |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Twelve phases, each with an exit criterion |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Why things are the way they are |
 
 ## The idea

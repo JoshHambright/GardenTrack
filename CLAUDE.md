@@ -60,7 +60,7 @@ appliance) that shares these documentation conventions. Nothing else.
 |---|---|
 | `docs/PRODUCT.md` | What we're building, principles, device tiers, feature inventory |
 | `docs/DATA_MODEL.md` | The domain model. **Read before ROADMAP.md** |
-| `docs/ROADMAP.md` | 11 phases, each with an exit criterion |
+| `docs/ROADMAP.md` | 12 phases, each with an exit criterion |
 | `docs/DECISIONS.md` | ADR log. Read before changing an approach |
 | `docs/TRACKING.md` | Live tracker — update in the same commit as the work |
 | `spikes/` | Working prototypes. Each has a README on what it proved |

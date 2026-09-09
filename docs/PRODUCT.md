@@ -154,7 +154,7 @@ for context produces three screens that are actually different.
 
 ## 7. Feature inventory
 
-Legend: **v1** = phases 0–5, the first useful year · **v2** = phases 6–10 ·
+Legend: **v1** = phases 0–6, the first useful year · **v2** = phases 7–11 ·
 **backlog** = worth doing, unscheduled · **cut** = decided against
 
 ### 7.1 Garden structure
@@ -171,7 +171,14 @@ Legend: **v1** = phases 0–5, the first useful year · **v2** = phases 6–10 �
 | Grid rotation independent of the bed's own angle | v1 |
 | **Photo-traced beds — shoot a bed, tap its corners, plan on the rectified image** | v1 |
 | Containers, greenhouse, cold frame, border, mound as bed types | v1 |
-| Sun exposure per bed, and how it shifts across the season | v2 |
+| **Obstructions — house, fence, shed, trees — as rings with a height** | v1 |
+| **Painted light — shade cells by hand, per season window** | v1 |
+| **Computed light — direct-sun hours per point, from solar position and shadows** | v1 |
+| **Morning and afternoon hours kept separate, never one number** | v1 |
+| **Seasonal shift, including deciduous canopy leafing out and dropping** | v1 |
+| Sun-requirement warnings and shade-tolerant suggestions in the planner | v1 |
+| Observed light — a guided hourly task on a sunny day, tap sun or shade | v2 |
+| Terrain, slope and aspect as geometry | cut (D-020, D-023) |
 | Multiple sites (home + community plot) | v2 |
 | Automatic bed-boundary detection from a photo | backlog (D-015) |
 | Elevation, terracing, slope as geometry | cut (D-020) |
@@ -261,6 +268,14 @@ Legend: **v1** = phases 0–5, the first useful year · **v2** = phases 6–10 �
 > it**, **have it but past viability**, **don't have it** — which feeds the order
 > list — and **already planted this season**, because if borage is in bed 2 and
 > the insectary radius reaches bed 3, you don't need more borage.
+
+> A single "hours of sun" number on a bed is wrong three ways at once: spatially,
+> because a fence shades one edge; across the day, because six hours of morning sun
+> and six of afternoon sun are not the same six hours; and across the year, because
+> the bed that's full sun in May is half shaded in August once the maple is in leaf
+> and the sun has dropped. That last one is the single thing gardeners most
+> consistently misjudge, and it's why a spring plan fails in July. So light is a
+> field over the site, with morning and afternoon kept apart (DATA_MODEL §4.4).
 
 ### 7.6 Tasks and reminders
 
