@@ -1,0 +1,1496 @@
+<title>Bed Editor Spike</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --ground:#F1F3EE;
+  --panel:#FAFBF8;
+  --panel-2:#E9ECE5;
+  --ink:#1B221D;
+  --muted:#69726B;
+  --rule:#D6DBD2;
+  --rule-soft:#E4E8DF;
+  --accent:#0E6E72;
+  --accent-ink:#0A5155;
+  --accent-wash:rgba(14,110,114,.10);
+  --plant:#4A7C3F;
+  --plant-wash:rgba(74,124,63,.16);
+  --warn:#B4622A;
+  --bad:#A33B2A;
+  --grid-fine:#D9DED4;
+  --grid-coarse:#C3CABD;
+  --shadow:0 1px 2px rgba(27,34,29,.06),0 8px 24px rgba(27,34,29,.07);
+  --r:5px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#131714;
+    --panel:#1A1F1B;
+    --panel-2:#232A24;
+    --ink:#E6EAE4;
+    --muted:#8C948B;
+    --rule:#2C332D;
+    --rule-soft:#242B25;
+    --accent:#4FB3B8;
+    --accent-ink:#7FCED2;
+    --accent-wash:rgba(79,179,184,.14);
+    --plant:#7BB86A;
+    --plant-wash:rgba(123,184,106,.18);
+    --warn:#D98A4E;
+    --bad:#D2705C;
+    --grid-fine:#242B25;
+    --grid-coarse:#333C35;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131714;
+  --panel:#1A1F1B;
+  --panel-2:#232A24;
+  --ink:#E6EAE4;
+  --muted:#8C948B;
+  --rule:#2C332D;
+  --rule-soft:#242B25;
+  --accent:#4FB3B8;
+  --accent-ink:#7FCED2;
+  --accent-wash:rgba(79,179,184,.14);
+  --plant:#7BB86A;
+  --plant-wash:rgba(123,184,106,.18);
+  --warn:#D98A4E;
+  --bad:#D2705C;
+  --grid-fine:#242B25;
+  --grid-coarse:#333C35;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font-family:Barlow,system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:14px;line-height:1.45;
+  -webkit-text-size-adjust:100%;
+  overscroll-behavior:none;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.lab{
+  font-family:"Barlow Condensed",Barlow,sans-serif;
+  text-transform:uppercase;letter-spacing:.09em;font-weight:600;
+  font-size:12px;color:var(--muted);
+}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+
+/* ---------- shell ---------- */
+.app{
+  display:grid;height:100dvh;min-height:540px;
+  grid-template-columns:76px minmax(0,1fr) 316px;
+  grid-template-rows:auto minmax(0,1fr);
+  grid-template-areas:"bar bar bar" "rail stage insp";
+}
+.bar{
+  grid-area:bar;display:flex;align-items:center;gap:18px;
+  padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--rule);
+  flex-wrap:wrap;
+}
+.brand{display:flex;align-items:baseline;gap:9px;margin-right:2px}
+.brand b{font-weight:600;font-size:15px;letter-spacing:-.01em}
+.brand span{font-size:11px;color:var(--muted);font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.1em}
+.barsec{display:flex;align-items:center;gap:7px}
+.barsec + .barsec{padding-left:16px;border-left:1px solid var(--rule)}
+
+.seg{display:flex;border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;background:var(--ground)}
+.seg button{
+  border:0;background:transparent;padding:5px 9px;cursor:pointer;
+  font-size:12px;font-family:"IBM Plex Mono",monospace;color:var(--muted);
+}
+.seg button + button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+:root[data-theme="dark"] .seg button[aria-pressed="true"],
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{color:#0d1210}}
+
+.tgl{
+  display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  padding:4px 9px;border:1px solid var(--rule);border-radius:var(--r);background:var(--ground);
+  font-size:12px;
+}
+.tgl[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-wash);color:var(--accent-ink)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.tgl[aria-pressed="true"] .dot{background:var(--accent)}
+
+/* ---------- tool rail ---------- */
+.rail{
+  grid-area:rail;background:var(--panel);border-right:1px solid var(--rule);
+  display:flex;flex-direction:column;gap:2px;padding:8px 6px;overflow:auto;
+}
+.tool{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  border:1px solid transparent;background:transparent;border-radius:var(--r);
+  padding:7px 2px 6px;cursor:pointer;
+}
+.tool svg{width:22px;height:22px;display:block}
+.tool i{
+  font-style:normal;font-family:"Barlow Condensed",sans-serif;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center;line-height:1.1;
+}
+.tool:hover{background:var(--panel-2)}
+.tool[aria-pressed="true"]{background:var(--accent-wash);border-color:var(--accent)}
+.tool[aria-pressed="true"] i{color:var(--accent-ink)}
+.railgap{height:1px;background:var(--rule);margin:7px 4px}
+
+/* ---------- stage ---------- */
+.stage{grid-area:stage;position:relative;overflow:hidden;background:var(--ground);touch-action:none}
+#plan{width:100%;height:100%;display:block;cursor:crosshair}
+#plan.panning{cursor:grabbing}
+.stage.select #plan{cursor:default}
+
+.hint{
+  position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+  background:var(--panel);border:1px solid var(--rule);border-radius:var(--r);
+  padding:6px 12px;font-size:12.5px;color:var(--muted);box-shadow:var(--shadow);
+  pointer-events:none;max-width:calc(100% - 24px);text-align:center;
+}
+.hint b{color:var(--ink);font-weight:600}
+.zoomer{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:5px}
+.zoomer button{
+  width:34px;height:34px;border:1px solid var(--rule);background:var(--panel);
+  border-radius:var(--r);cursor:pointer;font-size:16px;line-height:1;box-shadow:var(--shadow);
+}
+.finish{
+  position:absolute;left:12px;bottom:12px;display:none;gap:7px;
+}
+.finish.on{display:flex}
+.finish button{
+  border:1px solid var(--accent);background:var(--accent);color:#fff;
+  padding:8px 14px;border-radius:var(--r);cursor:pointer;font-weight:500;box-shadow:var(--shadow);
+}
+.finish button.ghost{background:var(--panel);color:var(--ink);border-color:var(--rule)}
+
+/* length editor popover */
+.lenpop{
+  position:absolute;display:none;z-index:6;background:var(--panel);
+  border:1px solid var(--accent);border-radius:var(--r);box-shadow:var(--shadow);
+  padding:7px;gap:6px;align-items:center;
+}
+.lenpop.on{display:flex}
+.lenpop input{
+  width:92px;font-family:"IBM Plex Mono",monospace;font-size:13px;padding:5px 7px;
+  border:1px solid var(--rule);border-radius:4px;background:var(--ground);color:var(--ink);
+}
+.lenpop button{border:0;background:var(--accent);color:#fff;padding:6px 10px;border-radius:4px;cursor:pointer}
+
+/* ---------- inspector ---------- */
+.insp{
+  grid-area:insp;background:var(--panel);border-left:1px solid var(--rule);
+  overflow:auto;display:flex;flex-direction:column;
+}
+.block{padding:13px 15px;border-bottom:1px solid var(--rule)}
+.block > .lab{display:block;margin-bottom:9px}
+.rows{display:flex;flex-direction:column;gap:7px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.row .k{color:var(--muted);font-size:13px}
+.row .v{font-family:"IBM Plex Mono",monospace;font-size:13px;font-variant-numeric:tabular-nums}
+.row .v.big{font-size:16px;font-weight:500}
+
+.namebox{
+  width:100%;font:inherit;font-size:15px;font-weight:600;padding:6px 8px;
+  border:1px solid transparent;border-radius:4px;background:var(--panel-2);color:var(--ink);
+}
+.namebox:hover{border-color:var(--rule)}
+
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{
+  border:1px solid var(--rule);background:var(--ground);border-radius:20px;
+  padding:3px 10px;font-size:12px;cursor:pointer;color:var(--muted);
+}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-wash);color:var(--accent-ink)}
+
+.cov{display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--panel-2);margin:9px 0 7px}
+.cov i{display:block;height:100%}
+.covkey{display:flex;gap:13px;font-size:11.5px;color:var(--muted)}
+.covkey span{display:flex;align-items:center;gap:5px}
+.sw{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+.verdict{border-radius:var(--r);padding:10px 12px;border:1px solid var(--rule);background:var(--ground)}
+.verdict.good{border-color:var(--plant);background:var(--plant-wash)}
+.verdict.off{border-color:var(--warn);background:rgba(180,98,42,.12)}
+.verdict .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.verdict .hd b{font-size:15px}
+.verdict p{margin:6px 0 0;font-size:12.5px;color:var(--muted);line-height:1.4}
+
+.slider{display:flex;align-items:center;gap:9px}
+.slider input{flex:1;accent-color:var(--accent)}
+.note{font-size:12px;color:var(--muted);line-height:1.45;margin:0}
+.note + .note{margin-top:7px}
+.del{
+  border:1px solid var(--rule);background:transparent;color:var(--bad);
+  padding:6px 11px;border-radius:var(--r);cursor:pointer;font-size:13px;
+}
+.empty{padding:26px 16px;color:var(--muted);font-size:13px;line-height:1.5}
+.empty b{color:var(--ink);display:block;margin-bottom:5px;font-weight:600}
+.sheetgrip{display:none}
+
+/* ---------- phone ---------- */
+@media (max-width:900px){
+  .app{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr) auto;
+    grid-template-areas:"bar" "stage" "rail";
+  }
+  .rail{
+    flex-direction:row;border-right:0;border-top:1px solid var(--rule);
+    overflow-x:auto;padding:5px 6px;gap:3px;
+  }
+  .tool{min-width:60px;flex:0 0 auto;padding:6px 4px}
+  .railgap{width:1px;height:auto;margin:5px 3px}
+  .insp{
+    position:fixed;left:0;right:0;bottom:0;z-index:8;max-height:64dvh;
+    border-left:0;border-top:1px solid var(--rule);
+    border-radius:12px 12px 0 0;box-shadow:var(--shadow);
+    bottom:var(--railh,0px);
+    transform:translateY(calc(100% - 46px));transition:transform .22s ease;
+  }
+  .hint{bottom:58px}
+  .insp.open{transform:translateY(0)}
+  .sheetgrip{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:12px 15px;cursor:pointer;border:0;background:transparent;width:100%;
+    border-bottom:1px solid var(--rule);
+  }
+  .sheetgrip .lab{color:var(--ink)}
+  .bar{gap:10px;padding:7px 10px}
+  .barsec + .barsec{padding-left:10px}
+  .brand span{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* svg element styling */
+.bedface{fill:var(--panel);stroke:var(--accent);stroke-width:1.5px;vector-effect:non-scaling-stroke}
+.bedface.sel{stroke-width:2.5px}
+.bedface.native{stroke:var(--plant)}
+.holeface{fill:var(--ground);stroke:var(--muted);stroke-width:1.2px;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+.obsface{fill:var(--panel-2);stroke:var(--muted);stroke-width:1.2px;vector-effect:non-scaling-stroke}
+.cell{stroke:var(--accent);stroke-width:.6px;vector-effect:non-scaling-stroke;pointer-events:none}
+.dimline{stroke:var(--accent);stroke-width:1px;vector-effect:non-scaling-stroke;fill:none}
+.dimtick{stroke:var(--accent);stroke-width:1px;vector-effect:non-scaling-stroke}
+.handle{fill:var(--panel);stroke:var(--accent);stroke-width:2px;vector-effect:non-scaling-stroke;cursor:grab}
+.ghostline{stroke:var(--accent);stroke-width:1.5px;stroke-dasharray:6 4;vector-effect:non-scaling-stroke;fill:none}
+.driftdot{fill:var(--plant);opacity:.85}
+.spec{fill:var(--plant-wash);stroke:var(--plant);stroke-width:1.5px;vector-effect:non-scaling-stroke}
+.chiprect{fill:var(--panel);stroke:var(--accent);stroke-width:1px;vector-effect:non-scaling-stroke;cursor:pointer}
+.chiptext{font-family:"IBM Plex Mono",monospace;fill:var(--accent-ink);pointer-events:none}
+.bedname{font-family:"Barlow Condensed",sans-serif;letter-spacing:.07em;text-transform:uppercase;fill:var(--muted);pointer-events:none}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand"><b>Bed Editor</b><span>Spike A · GardenTrack</span></div>
+
+    <div class="barsec">
+      <span class="lab">Snap</span>
+      <button class="tgl" id="snapOn" aria-pressed="true"><span class="dot"></span>Assists</button>
+      <div class="seg" id="gridSeg">
+        <button data-mm="76.2">3″</button>
+        <button data-mm="152.4" aria-pressed="true">6″</button>
+        <button data-mm="304.8">1′</button>
+      </div>
+      <div class="seg" id="angSeg">
+        <button data-deg="0">free</button>
+        <button data-deg="15" aria-pressed="true">15°</button>
+        <button data-deg="90">90°</button>
+      </div>
+    </div>
+
+    <div class="barsec">
+      <span class="lab">Units</span>
+      <div class="seg" id="unitSeg">
+        <button data-u="imp" aria-pressed="true">ft·in</button>
+        <button data-u="met">m·cm</button>
+      </div>
+    </div>
+
+    <div class="barsec">
+      <button class="tgl" id="undoBtn">Undo</button>
+      <button class="tgl" id="fitBtn">Fit</button>
+    </div>
+  </header>
+
+  <nav class="rail" id="rail" aria-label="Tools"></nav>
+
+  <div class="stage select" id="stage">
+    <svg id="plan" role="application" aria-label="Garden plan canvas"></svg>
+    <div class="hint" id="hint"></div>
+    <div class="finish" id="finish">
+      <button id="finishBtn">Finish shape</button>
+      <button id="cancelBtn" class="ghost">Cancel</button>
+    </div>
+    <div class="zoomer">
+      <button id="zin" aria-label="Zoom in">+</button>
+      <button id="zout" aria-label="Zoom out">−</button>
+    </div>
+    <div class="lenpop" id="lenpop">
+      <input id="lenval" class="mono" inputmode="decimal" aria-label="Edge length">
+      <button id="lenok">Set</button>
+    </div>
+  </div>
+
+  <aside class="insp" id="insp">
+    <button class="sheetgrip" id="grip"><span class="lab">Inspector</span><span class="mono" id="gripv">—</span></button>
+    <div id="inspBody"></div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Units. Everything internal is millimetres (DATA_MODEL D-009).
+   ============================================================ */
+const FT = 304.8, IN = 25.4;
+let units = "imp";
+
+function fmt(mm){
+  if(units === "met"){
+    return mm >= 1000 ? (mm/1000).toFixed(2).replace(/0$/,"") + " m"
+                      : Math.round(mm/10) + " cm";
+  }
+  const ti = mm / IN;
+  const ft = Math.floor(ti / 12);
+  let inch = ti - ft*12;
+  if(Math.abs(inch - 12) < 0.05){ return (ft+1) + "′ 0″"; }
+  const s = inch.toFixed(1).replace(/\.0$/,"");
+  return ft + "′ " + s + "″";
+}
+function fmtArea(mm2){
+  if(units === "met") return (mm2/1e6).toFixed(2) + " m²";
+  return (mm2/(FT*FT)).toFixed(1) + " sq ft";
+}
+function parseLen(str){
+  const t = String(str).trim().toLowerCase();
+  if(!t) return null;
+  if(units === "met"){
+    const m = t.match(/^([\d.]+)\s*(m|cm|mm)?$/);
+    if(!m) return null;
+    const v = parseFloat(m[1]);
+    return m[2] === "cm" ? v*10 : m[2] === "mm" ? v : v*1000;
+  }
+  const fi = t.match(/^(?:([\d.]+)\s*(?:'|′|ft)\s*)?(?:([\d.]+)\s*(?:"|″|in)?)?$/);
+  if(fi && (fi[1] || fi[2])) return (parseFloat(fi[1]||0))*FT + (parseFloat(fi[2]||0))*IN;
+  return null;
+}
+
+/* ============================================================
+   Geometry
+   ============================================================ */
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+
+function polyArea(p){
+  let a = 0;
+  for(let i=0;i<p.length;i++){ const q=p[(i+1)%p.length]; a += p[i].x*q.y - q.x*p[i].y; }
+  return Math.abs(a)/2;
+}
+function bbox(p){
+  const xs=p.map(v=>v.x), ys=p.map(v=>v.y);
+  return {x0:Math.min(...xs), y0:Math.min(...ys), x1:Math.max(...xs), y1:Math.max(...ys)};
+}
+function centroid(p){
+  const b = bbox(p);
+  return {x:(b.x0+b.x1)/2, y:(b.y0+b.y1)/2};
+}
+function rot(pt, c, deg){
+  const r = deg*Math.PI/180, s=Math.sin(r), co=Math.cos(r);
+  const dx=pt.x-c.x, dy=pt.y-c.y;
+  return {x:c.x+dx*co-dy*s, y:c.y+dx*s+dy*co};
+}
+function pointInPoly(pt, poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const a=poly[i], b=poly[j];
+    if((a.y>pt.y)!==(b.y>pt.y) && pt.x < (b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x) inside=!inside;
+  }
+  return inside;
+}
+
+/* Sutherland–Hodgman against one axis-aligned half-plane */
+function clipHalf(poly, keep, cut){
+  if(!poly.length) return poly;
+  const out=[];
+  for(let i=0;i<poly.length;i++){
+    const cur=poly[i], prev=poly[(i+poly.length-1)%poly.length];
+    const ci=keep(cur), pi=keep(prev);
+    if(ci){ if(!pi) out.push(cut(prev,cur)); out.push(cur); }
+    else if(pi){ out.push(cut(prev,cur)); }
+  }
+  return out;
+}
+function clipToRect(poly, x0,y0,x1,y1){
+  const ixX = X => (a,b) => ({x:X, y:a.y + (b.y-a.y)*(X-a.x)/(b.x-a.x)});
+  const ixY = Y => (a,b) => ({y:Y, x:a.x + (b.x-a.x)*(Y-a.y)/(b.y-a.y)});
+  let p = poly;
+  p = clipHalf(p, v=>v.x>=x0, ixX(x0));
+  p = clipHalf(p, v=>v.x<=x1, ixX(x1));
+  p = clipHalf(p, v=>v.y>=y0, ixY(y0));
+  p = clipHalf(p, v=>v.y<=y1, ixY(y1));
+  return p;
+}
+
+/* Ramer–Douglas–Peucker */
+function rdp(pts, eps){
+  if(pts.length < 3) return pts.slice();
+  let idx=0, max=0;
+  const a=pts[0], b=pts[pts.length-1];
+  const L=dist(a,b);
+  for(let i=1;i<pts.length-1;i++){
+    const p=pts[i];
+    const d = L===0 ? dist(p,a)
+      : Math.abs((b.y-a.y)*p.x - (b.x-a.x)*p.y + b.x*a.y - b.y*a.x)/L;
+    if(d>max){ max=d; idx=i; }
+  }
+  if(max > eps){
+    return rdp(pts.slice(0,idx+1), eps).slice(0,-1).concat(rdp(pts.slice(idx), eps));
+  }
+  return [a,b];
+}
+
+/* Closed Catmull–Rom → cubic bezier path */
+function curvePath(p){
+  if(p.length < 3) return polyPath(p);
+  let d = `M ${p[0].x} ${p[0].y}`;
+  for(let i=0;i<p.length;i++){
+    const p0=p[(i-1+p.length)%p.length], p1=p[i],
+          p2=p[(i+1)%p.length], p3=p[(i+2)%p.length];
+    d += ` C ${p1.x+(p2.x-p0.x)/6} ${p1.y+(p2.y-p0.y)/6},`
+       + ` ${p2.x-(p3.x-p1.x)/6} ${p2.y-(p3.y-p1.y)/6},`
+       + ` ${p2.x} ${p2.y}`;
+  }
+  return d + " Z";
+}
+const polyPath = p => p.length ? "M " + p.map(v=>v.x+" "+v.y).join(" L ") + " Z" : "";
+const ringPath = r => r.curved ? curvePath(r.points) : polyPath(r.points);
+
+/* Sample a ring into a polygon for clipping / hit-testing */
+function ringPoly(r, step){
+  if(!r.curved) return r.points;
+  const p=r.points, out=[];
+  const seg = step || 8;
+  for(let i=0;i<p.length;i++){
+    const p0=p[(i-1+p.length)%p.length], p1=p[i],
+          p2=p[(i+1)%p.length], p3=p[(i+2)%p.length];
+    for(let t=0;t<seg;t++){
+      const u=t/seg, u2=u*u, u3=u2*u;
+      out.push({
+        x:0.5*((2*p1.x)+(-p0.x+p2.x)*u+(2*p0.x-5*p1.x+4*p2.x-p3.x)*u2+(-p0.x+3*p1.x-3*p2.x+p3.x)*u3),
+        y:0.5*((2*p1.y)+(-p0.y+p2.y)*u+(2*p0.y-5*p1.y+4*p2.y-p3.y)*u2+(-p0.y+3*p1.y-3*p2.y+p3.y)*u3)
+      });
+    }
+  }
+  return out;
+}
+
+/* Is this ring a rectangle? (drives the length-edit rule set, D-024) */
+function rectInfo(r){
+  if(r.curved || r.points.length !== 4) return null;
+  const p=r.points;
+  let worst=0;
+  for(let i=0;i<4;i++){
+    const a=p[(i+3)%4], b=p[i], c=p[(i+1)%4];
+    const v1={x:a.x-b.x,y:a.y-b.y}, v2={x:c.x-b.x,y:c.y-b.y};
+    const ang = Math.abs(Math.atan2(v1.x*v2.y-v1.y*v2.x, v1.x*v2.x+v1.y*v2.y)*180/Math.PI);
+    worst = Math.max(worst, Math.abs(ang-90));
+  }
+  return worst < 3 ? {skew:worst} : null;
+}
+function squareness(r){
+  if(r.curved) return null;
+  const p=r.points; if(p.length<3) return null;
+  let worst=0, n=0;
+  for(let i=0;i<p.length;i++){
+    const a=p[(i+p.length-1)%p.length], b=p[i], c=p[(i+1)%p.length];
+    const v1={x:a.x-b.x,y:a.y-b.y}, v2={x:c.x-b.x,y:c.y-b.y};
+    let ang = Math.abs(Math.atan2(v1.x*v2.y-v1.y*v2.x, v1.x*v2.x+v1.y*v2.y)*180/Math.PI);
+    const near = Math.min(Math.abs(ang-90), Math.abs(ang-180), ang);
+    if(Math.abs(ang-90) < 45){ worst = Math.max(worst, Math.abs(ang-90)); n++; }
+  }
+  return n ? worst : null;
+}
+
+/* deterministic PRNG so drift scatter is stable across renders */
+function prng(seed){
+  let a = 0; for(const ch of String(seed)) a = (a*31 + ch.charCodeAt(0)) >>> 0;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a>>>15, 1 | a);
+    t = t + Math.imul(t ^ t>>>7, 61 | t) ^ t;
+    return ((t ^ t>>>14) >>> 0) / 4294967296; };
+}
+
+/* ============================================================
+   Coverage — the grid stays a lattice; shape arrives as a number (D-019)
+   ============================================================ */
+function bedCells(bed){
+  const poly = ringPoly(bed.ring);
+  const c = centroid(poly);
+  const local = poly.map(p => rot(p, c, -bed.gridRot));
+  const holes = bed.holes.map(h => ringPoly(h).map(p => rot(p, c, -bed.gridRot)));
+  const b = bbox(local);
+  const s = bed.cellMm;
+  const ox = Math.floor(b.x0/s)*s, oy = Math.floor(b.y0/s)*s;
+  const cols = Math.ceil((b.x1-ox)/s), rows = Math.ceil((b.y1-oy)/s);
+  const cells = [];
+  const A = s*s;
+  for(let r=0;r<rows;r++) for(let cIdx=0;cIdx<cols;cIdx++){
+    const x0=ox+cIdx*s, y0=oy+r*s;
+    let a = polyArea(clipToRect(local, x0, y0, x0+s, y0+s));
+    if(a <= 0) continue;
+    for(const h of holes) a -= polyArea(clipToRect(h, x0, y0, x0+s, y0+s));
+    const cov = clamp(a/A, 0, 1);
+    if(cov < 0.02) continue;
+    cells.push({col:cIdx, row:r, x:x0, y:y0, s, cov});
+  }
+  return {cells, pivot:c, rot:bed.gridRot};
+}
+const COV_FULL = 0.85, COV_MIN = 0.30;
+
+/* ============================================================
+   State
+   ============================================================ */
+const V = (x,y) => ({x:x*FT, y:y*FT});
+let uid = 0; const nid = p => p + "-" + (++uid);
+
+function rectRing(x,y,w,h){
+  return {points:[V(x,y), V(x+w,y), V(x+w,y+h), V(x,y+h)], curved:false};
+}
+function circleRing(cx,cy,r,n){
+  const pts=[]; n=n||16;
+  for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; pts.push(V(cx+Math.cos(a)*r, cy+Math.sin(a)*r)); }
+  return {points:pts, curved:true};
+}
+
+const state = {
+  beds:[], obs:[], plants:[],
+  tool:"select", sel:null,
+  snap:{on:true, gridMm:152.4, angDeg:15},
+  draft:null, view:{x:0,y:0,w:1},
+  history:[]
+};
+
+function seed(){
+  state.beds.push({
+    id:nid("bed"), name:"North Raised", purpose:"annualVeg",
+    ring:rectRing(0,0,4,8), holes:[], cellMm:FT, gridRot:0, target:{w:4,h:8}
+  });
+  state.beds.push({
+    id:nid("bed"), name:"South Raised", purpose:"annualVeg",
+    ring:rectRing(5.5,0,4,8), holes:[], cellMm:FT, gridRot:0, target:{w:4,h:8}
+  });
+  state.beds.push({
+    id:nid("bed"), name:"Corner L", purpose:"annualVeg",
+    ring:{points:[V(0,10),V(8,10),V(8,14),V(4,14),V(4,18),V(0,18)], curved:false},
+    holes:[], cellMm:FT, gridRot:0, target:null
+  });
+
+  const island = [];
+  for(let i=0;i<10;i++){
+    const a = i/10*Math.PI*2;
+    const rr = 4.4 + Math.sin(a*2)*1.15 + Math.cos(a*3)*0.4;
+    island.push(V(15.5+Math.cos(a)*rr, 8+Math.sin(a)*rr*0.82));
+  }
+  const isle = {
+    id:nid("bed"), name:"Pollinator Island", purpose:"native",
+    ring:{points:island, curved:true}, holes:[], cellMm:FT, gridRot:0, target:null
+  };
+  isle.holes.push(circleRing(17.4, 6.4, 1.1, 10));
+  state.beds.push(isle);
+
+  state.obs.push({id:nid("obs"), kind:"fence", name:"East fence",
+    ring:rectRing(21.5,-2,0.4,22), heightMm:6*FT});
+  state.obs.push({id:nid("obs"), kind:"tree", name:"Silver maple",
+    ring:circleRing(19.5,17.5,5.2,14), heightMm:26*FT});
+
+  const b0 = state.beds[0];
+  state.plants.push({id:nid("pl"), bedId:b0.id, name:"Cherokee Purple", kind:"cells",
+    cells:[[0,0],[1,0],[0,1],[1,1]]});
+  state.plants.push({id:nid("pl"), bedId:b0.id, name:"Genovese basil", kind:"cells",
+    cells:[[2,0],[3,0],[2,1]]});
+  state.plants.push({id:nid("pl"), bedId:isle.id, name:"Liatris pycnostachya", kind:"drift",
+    ring:{points:[V(13.6,9.4),V(15.2,10.6),V(17.1,10.2),V(17.6,8.6),V(15.9,7.9),V(14.1,8.3)],curved:true},
+    count:22});
+  state.plants.push({id:nid("pl"), bedId:isle.id, name:"Amelanchier alnifolia", kind:"point",
+    x:13.4*FT, y:6.4*FT, r:1.6*FT});
+}
+seed();
+
+function snapshot(){
+  state.history.push(JSON.stringify({beds:state.beds, obs:state.obs, plants:state.plants}));
+  if(state.history.length > 40) state.history.shift();
+}
+function undo(){
+  const s = state.history.pop();
+  if(!s) return;
+  const o = JSON.parse(s);
+  state.beds = o.beds; state.obs = o.obs; state.plants = o.plants;
+  if(state.sel && !findSel()) state.sel = null;
+  render();
+}
+
+/* ============================================================
+   View / coordinates
+   ============================================================ */
+const svg = document.getElementById("plan");
+const stage = document.getElementById("stage");
+
+function viewBoxStr(){
+  const r = stage.getBoundingClientRect();
+  const h = state.view.w * (r.height / Math.max(r.width,1));
+  return `${state.view.x} ${state.view.y} ${state.view.w} ${h}`;
+}
+function toWorld(ev){
+  const pt = svg.createSVGPoint();
+  pt.x = ev.clientX; pt.y = ev.clientY;
+  const m = svg.getScreenCTM();
+  return m ? pt.matrixTransform(m.inverse()) : {x:0,y:0};
+}
+function pxToWorld(px){
+  const r = stage.getBoundingClientRect();
+  return px * state.view.w / Math.max(r.width,1);
+}
+function fit(){
+  let all=[];
+  state.beds.forEach(b => all = all.concat(ringPoly(b.ring)));
+  state.obs.forEach(o => all = all.concat(ringPoly(o.ring)));
+  if(!all.length){ state.view={x:-FT,y:-FT,w:20*FT}; return; }
+  const b = bbox(all), pad = 2.2*FT;
+  const r = stage.getBoundingClientRect();
+  const aspect = r.height / Math.max(r.width,1);
+  let w = (b.x1-b.x0) + pad*2;
+  const hNeeded = (b.y1-b.y0) + pad*2;
+  if(w*aspect < hNeeded) w = hNeeded/aspect;
+  state.view = {x:(b.x0+b.x1)/2 - w/2, y:(b.y0+b.y1)/2 - w*aspect/2, w};
+}
+function zoomAt(cx, cy, k){
+  const r = stage.getBoundingClientRect();
+  const aspect = r.height/Math.max(r.width,1);
+  const nw = clamp(state.view.w*k, 1.2*FT, 400*FT);
+  const kk = nw/state.view.w;
+  state.view.x = cx - (cx - state.view.x)*kk;
+  state.view.y = cy - (cy - state.view.y)*kk;
+  state.view.w = nw;
+  render();
+}
+
+/* ============================================================
+   Snapping (D-024): angle first, then length along the ray
+   ============================================================ */
+function snapPoint(p, from){
+  if(!state.snap.on) return p;
+  const g = state.snap.gridMm, a = state.snap.angDeg;
+  if(from && a > 0){
+    const dx=p.x-from.x, dy=p.y-from.y;
+    const step = a*Math.PI/180;
+    const ang = Math.round(Math.atan2(dy,dx)/step)*step;
+    let len = Math.hypot(dx,dy);
+    if(g > 0) len = Math.round(len/g)*g;
+    return {x:from.x+Math.cos(ang)*len, y:from.y+Math.sin(ang)*len};
+  }
+  if(g > 0) return {x:Math.round(p.x/g)*g, y:Math.round(p.y/g)*g};
+  return p;
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+const NS = "http://www.w3.org/2000/svg";
+const el = (n,a) => { const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); return e; };
+
+function findSel(){
+  if(!state.sel) return null;
+  const {type,id} = state.sel;
+  const pool = type==="bed" ? state.beds : type==="obs" ? state.obs : state.plants;
+  return pool.find(o=>o.id===id) || null;
+}
+
+function render(){
+  svg.setAttribute("viewBox", viewBoxStr());
+  svg.textContent = "";
+
+  const defs = el("defs");
+  const mk = (id, size, cls) => {
+    const p = el("pattern",{id, width:size, height:size, patternUnits:"userSpaceOnUse"});
+    p.appendChild(el("path",{d:`M ${size} 0 L 0 0 0 ${size}`, fill:"none",
+      stroke:`var(--${cls})`, "stroke-width":"1", "vector-effect":"non-scaling-stroke"}));
+    return p;
+  };
+  defs.appendChild(mk("gf", FT, "grid-fine"));
+  defs.appendChild(mk("gc", 5*FT, "grid-coarse"));
+  svg.appendChild(defs);
+
+  const vb = viewBoxStr().split(" ").map(Number);
+  const bgAttr = {x:vb[0], y:vb[1], width:vb[2], height:vb[3]};
+  if(state.view.w < 60*FT) svg.appendChild(el("rect",{...bgAttr, fill:"url(#gf)"}));
+  svg.appendChild(el("rect",{...bgAttr, fill:"url(#gc)"}));
+
+  const gObs = el("g"), gBed = el("g"), gCell = el("g"), gPl = el("g"), gOv = el("g");
+  [gObs,gBed,gCell,gPl,gOv].forEach(g=>svg.appendChild(g));
+
+  /* obstructions */
+  for(const o of state.obs){
+    const p = el("path",{d:ringPath(o.ring), class:"obsface"});
+    p.dataset.pick = "obs:"+o.id;
+    if(state.sel && state.sel.id===o.id) p.style.strokeWidth="2.5px";
+    gObs.appendChild(p);
+    const c = centroid(ringPoly(o.ring));
+    const t = el("text",{x:c.x, y:c.y, class:"bedname", "text-anchor":"middle", "font-size":pxToWorld(11.5)});
+    t.textContent = o.name + " · " + fmt(o.heightMm) + " tall";
+    gObs.appendChild(t);
+  }
+
+  /* beds + clipped cells */
+  for(const b of state.beds){
+    const sel = state.sel && state.sel.id===b.id;
+    const face = el("path",{d:ringPath(b.ring),
+      class:"bedface" + (sel?" sel":"") + (b.purpose==="native"?" native":"")});
+    face.dataset.pick = "bed:"+b.id;
+    gBed.appendChild(face);
+    for(const h of b.holes) gBed.appendChild(el("path",{d:ringPath(h), class:"holeface"}));
+
+    if(b.purpose !== "native"){
+      const {cells, pivot, rot:gr} = bedCells(b);
+      const g = el("g",{transform:`rotate(${gr} ${pivot.x} ${pivot.y})`});
+      for(const c of cells){
+        const full = c.cov >= COV_FULL, dead = c.cov < COV_MIN;
+        g.appendChild(el("rect",{
+          x:c.x, y:c.y, width:c.s, height:c.s, class:"cell",
+          fill: dead ? "transparent" : "var(--accent)",
+          "fill-opacity": dead ? 0 : (full ? 0.09 : 0.05 + c.cov*0.05),
+          "stroke-opacity": dead ? 0.12 : (full ? 0.45 : 0.25)
+        }));
+      }
+      gCell.appendChild(g);
+    }
+
+    const bp = ringPoly(b.ring), bb = bbox(bp);
+    const nm = el("text",{x:(bb.x0+bb.x1)/2, y:bb.y0 - pxToWorld(9),
+      class:"bedname", "text-anchor":"middle", "font-size":pxToWorld(12)});
+    nm.textContent = b.name;
+    gBed.appendChild(nm);
+  }
+
+  /* plantings */
+  for(const pl of state.plants){
+    const bed = state.beds.find(b=>b.id===pl.bedId);
+    if(!bed) continue;
+    if(pl.kind === "cells"){
+      const {cells, pivot, rot:gr} = bedCells(bed);
+      const g = el("g",{transform:`rotate(${gr} ${pivot.x} ${pivot.y})`});
+      for(const [cc,rr] of pl.cells){
+        const c = cells.find(z=>z.col===cc && z.row===rr);
+        if(!c) continue;
+        g.appendChild(el("rect",{x:c.x+c.s*0.14, y:c.y+c.s*0.14,
+          width:c.s*0.72, height:c.s*0.72, rx:c.s*0.1,
+          fill:"var(--plant)", "fill-opacity":0.55}));
+      }
+      gPl.appendChild(g);
+    } else if(pl.kind === "drift"){
+      const poly = ringPoly(pl.ring), bb = bbox(poly), rnd = prng(pl.id);
+      gPl.appendChild(el("path",{d:ringPath(pl.ring), fill:"var(--plant)",
+        "fill-opacity":0.10, stroke:"var(--plant)", "stroke-width":"1",
+        "stroke-dasharray":"5 4", "vector-effect":"non-scaling-stroke"}));
+      let placed=0, guard=0;
+      while(placed < pl.count && guard++ < pl.count*60){
+        const p = {x:bb.x0+rnd()*(bb.x1-bb.x0), y:bb.y0+rnd()*(bb.y1-bb.y0)};
+        if(!pointInPoly(p, poly)) continue;
+        gPl.appendChild(el("circle",{cx:p.x, cy:p.y, r:FT*0.17, class:"driftdot"}));
+        placed++;
+      }
+    } else if(pl.kind === "point"){
+      gPl.appendChild(el("circle",{cx:pl.x, cy:pl.y, r:pl.r, class:"spec"}));
+      gPl.appendChild(el("circle",{cx:pl.x, cy:pl.y, r:FT*0.2, fill:"var(--plant)"}));
+    }
+  }
+
+  /* selection overlay: dimension lines, handles, editable length chips */
+  const s = findSel();
+  if(s && s.ring && state.tool === "select"){
+    const pts = s.ring.points;
+    const hR = pxToWorld(7);
+    if(!s.ring.curved){
+      for(let i=0;i<pts.length;i++){
+        const a=pts[i], b=pts[(i+1)%pts.length];
+        const mid = {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+        const len = dist(a,b);
+        if(len < pxToWorld(26)) continue;
+        const nx = -(b.y-a.y)/len, ny = (b.x-a.x)/len;
+        const off = pxToWorld(17);
+        const m2 = {x:mid.x+nx*off, y:mid.y+ny*off};
+        gOv.appendChild(el("line",{x1:a.x+nx*off*0.55, y1:a.y+ny*off*0.55,
+          x2:b.x+nx*off*0.55, y2:b.y+ny*off*0.55, class:"dimline", "stroke-opacity":0.4}));
+        const label = fmt(len);
+        const w = pxToWorld(label.length*6.6 + 12), h = pxToWorld(17);
+        const r = el("rect",{x:m2.x-w/2, y:m2.y-h/2, width:w, height:h, rx:pxToWorld(3), class:"chiprect"});
+        r.dataset.edge = s.id + ":" + i;
+        gOv.appendChild(r);
+        const t = el("text",{x:m2.x, y:m2.y + pxToWorld(3.8), class:"chiptext", "text-anchor":"middle", "font-size":pxToWorld(11)});
+        t.textContent = label;
+        gOv.appendChild(t);
+      }
+    }
+    pts.forEach((p,i)=>{
+      const c = el("circle",{cx:p.x, cy:p.y, r:hR, class:"handle"});
+      c.dataset.vert = s.id + ":" + i;
+      gOv.appendChild(c);
+    });
+  }
+
+  /* in-progress draft */
+  if(state.draft){
+    const d = state.draft;
+    if(d.pts.length){
+      const open = "M " + d.pts.map(v=>v.x+" "+v.y).join(" L ")
+                 + (d.cursor ? ` L ${d.cursor.x} ${d.cursor.y}` : "");
+      gOv.appendChild(el("path",{d:open, class:"ghostline"}));
+      d.pts.forEach(p => gOv.appendChild(el("circle",{cx:p.x, cy:p.y, r:pxToWorld(4),
+        fill:"var(--accent)"})));
+      if(d.cursor && d.pts.length){
+        const last = d.pts[d.pts.length-1];
+        const len = dist(last, d.cursor);
+        if(len > 0){
+          const t = el("text",{x:(last.x+d.cursor.x)/2, y:(last.y+d.cursor.y)/2 - pxToWorld(8),
+            class:"chiptext","text-anchor":"middle","font-size":pxToWorld(11)});
+          t.textContent = fmt(len);
+          gOv.appendChild(t);
+        }
+      }
+    }
+  }
+
+  drawInspector();
+  positionLenPop();
+}
+
+/* ============================================================
+   Inspector
+   ============================================================ */
+const inspBody = document.getElementById("inspBody");
+const gripv = document.getElementById("gripv");
+
+function drawInspector(){
+  const s = findSel();
+  if(!s){
+    inspBody.innerHTML = `<div class="empty"><b>Nothing selected</b>
+      Tap a bed to see its dimensions, grid coverage and accuracy check.
+      Pick a tool on the ${window.matchMedia("(max-width:900px)").matches?"bottom bar":"left"} to draw a new one.</div>`;
+    gripv.textContent = "—";
+    return;
+  }
+  if(state.sel.type === "bed") return bedInspector(s);
+  if(state.sel.type === "obs") return obsInspector(s);
+  return plantInspector(s);
+}
+
+function bedInspector(b){
+  const poly = ringPoly(b.ring), bb = bbox(poly);
+  const w = bb.x1-bb.x0, h = bb.y1-bb.y0;
+  const area = polyArea(poly) - b.holes.reduce((a,x)=>a+polyArea(ringPoly(x)),0);
+  const {cells} = b.purpose==="native" ? {cells:[]} : bedCells(b);
+  const full = cells.filter(c=>c.cov>=COV_FULL).length;
+  const part = cells.filter(c=>c.cov<COV_FULL && c.cov>=COV_MIN).length;
+  const dead = cells.filter(c=>c.cov<COV_MIN).length;
+  const tot = Math.max(full+part+dead,1);
+  const cap = full + cells.filter(c=>c.cov<COV_FULL && c.cov>=COV_MIN)
+                          .reduce((a,c)=>a+c.cov,0);
+  const sq = squareness(b.ring);
+
+  let verdict = "";
+  if(b.target){
+    const ew = Math.abs(w - b.target.w*FT), eh = Math.abs(h - b.target.h*FT);
+    const worst = Math.max(ew, eh);
+    const ok = worst < IN && (sq===null || sq < 1);
+    verdict = `<div class="block"><span class="lab">Accuracy check</span>
+      <div class="verdict ${ok?"good":"off"}">
+        <div class="hd"><b class="mono">${b.target.w}′ × ${b.target.h}′</b>
+          <span class="mono" style="color:${ok?"var(--plant)":"var(--warn)"}">
+            ${ok ? "on target" : "±" + fmt(worst)}</span></div>
+        <p>Drawn ${fmt(w)} × ${fmt(h)}${sq!==null?`, corners within ${sq.toFixed(1)}° of square`:""}.
+        ${ok ? "Dimensions are trustworthy enough for the Phase&nbsp;3 spacing maths."
+             : "Turn assists on and redraw to feel the difference."}</p>
+      </div></div>`;
+  }
+
+  inspBody.innerHTML = `
+    <div class="block">
+      <span class="lab">Bed</span>
+      <input class="namebox" id="nm" value="${b.name.replace(/"/g,"&quot;")}">
+      <div class="chips" style="margin-top:9px">
+        ${["annualVeg","native","perennial","mixed"].map(p=>
+          `<button class="chip" data-purpose="${p}" aria-pressed="${b.purpose===p}">${
+            p==="annualVeg"?"annual veg":p}</button>`).join("")}
+      </div>
+      <p class="note" style="margin-top:8px">${
+        b.purpose==="native"
+        ? "Native and perennial beds use drifts and specimens — no grid, deliberately (D-020)."
+        : "Annual beds use a square-foot grid clipped to the outline (D-019)."}</p>
+    </div>
+
+    <div class="block">
+      <span class="lab">Measured</span>
+      <div class="rows">
+        <div class="row"><span class="k">Bounding size</span><span class="v big">${fmt(w)} × ${fmt(h)}</span></div>
+        <div class="row"><span class="k">Enclosed area</span><span class="v">${fmtArea(area)}</span></div>
+        <div class="row"><span class="k">Vertices</span><span class="v">${b.ring.points.length}${b.ring.curved?" · splined":""}</span></div>
+        ${sq!==null?`<div class="row"><span class="k">Worst corner</span><span class="v">${sq.toFixed(1)}° off square</span></div>`:""}
+        ${b.holes.length?`<div class="row"><span class="k">Holes</span><span class="v">${b.holes.length}</span></div>`:""}
+      </div>
+    </div>
+    ${verdict}
+    ${b.purpose==="native" ? "" : `
+    <div class="block">
+      <span class="lab">Grid coverage</span>
+      <div class="cov">
+        <i style="flex:${full};background:var(--accent)"></i>
+        <i style="flex:${part};background:var(--accent);opacity:.42"></i>
+        <i style="flex:${dead};background:var(--rule)"></i>
+      </div>
+      <div class="covkey">
+        <span><i class="sw" style="background:var(--accent)"></i>${full} full</span>
+        <span><i class="sw" style="background:var(--accent);opacity:.42"></i>${part} partial</span>
+        <span><i class="sw" style="background:var(--rule)"></i>${dead} unusable</span>
+      </div>
+      <div class="rows" style="margin-top:11px">
+        <div class="row"><span class="k">Effective capacity</span><span class="v big">${cap.toFixed(1)} cells</span></div>
+        <div class="row"><span class="k">Of ${tot} touched</span><span class="v">${Math.round(cap/tot*100)}%</span></div>
+      </div>
+      <div class="slider" style="margin-top:12px">
+        <span class="lab" style="min-width:62px">Cell</span>
+        <div class="seg">
+          <button data-cell="152.4" aria-pressed="${Math.abs(b.cellMm-152.4)<1}">6″</button>
+          <button data-cell="304.8" aria-pressed="${Math.abs(b.cellMm-304.8)<1}">1′</button>
+        </div>
+      </div>
+      <div class="slider" style="margin-top:9px">
+        <span class="lab" style="min-width:62px">Rotate</span>
+        <input type="range" id="grot" min="0" max="90" step="1" value="${b.gridRot}">
+        <span class="mono" style="min-width:34px;text-align:right">${b.gridRot}°</span>
+      </div>
+      <p class="note" style="margin-top:7px">Grid angle is independent of the bed's own —
+        rows usually want to face the sun, not the bed edge.</p>
+    </div>`}
+
+    <div class="block">
+      <span class="lab">Shape</span>
+      <p class="note">${b.ring.curved
+        ? "Freehand stroke, simplified then splined. Clipping samples the spline into a polygon."
+        : "Straight-edged. Tap any dimension chip on the plan to type an exact length."}</p>
+      <p class="note">${rectInfo(b.ring)
+        ? "Recognised as a rectangle — editing one edge moves its opposite too."
+        : "Not a rectangle, so a length edit moves just that vertex."}</p>
+      <div style="margin-top:11px"><button class="del" id="delBed">Delete bed</button></div>
+    </div>`;
+
+  gripv.textContent = fmt(w) + " × " + fmt(h);
+
+  inspBody.querySelector("#nm").addEventListener("change", e=>{
+    snapshot(); b.name = e.target.value || "Untitled bed"; render();
+  });
+  inspBody.querySelectorAll("[data-purpose]").forEach(btn=>
+    btn.addEventListener("click", ()=>{ snapshot(); b.purpose = btn.dataset.purpose; render(); }));
+  inspBody.querySelectorAll("[data-cell]").forEach(btn=>
+    btn.addEventListener("click", ()=>{ snapshot(); b.cellMm = +btn.dataset.cell; render(); }));
+  const gr = inspBody.querySelector("#grot");
+  if(gr) gr.addEventListener("input", e=>{ b.gridRot = +e.target.value; render(); });
+  inspBody.querySelector("#delBed").addEventListener("click", ()=>{
+    snapshot();
+    state.beds = state.beds.filter(x=>x.id!==b.id);
+    state.plants = state.plants.filter(p=>p.bedId!==b.id);
+    state.sel = null; render();
+  });
+}
+
+function obsInspector(o){
+  const poly = ringPoly(o.ring), bb = bbox(poly);
+  inspBody.innerHTML = `
+    <div class="block">
+      <span class="lab">Obstruction</span>
+      <input class="namebox" id="nm" value="${o.name.replace(/"/g,"&quot;")}">
+      <p class="note" style="margin-top:8px">A ring with a height — the same geometry as a bed,
+        which is why these cost almost nothing to add (D-023).</p>
+    </div>
+    <div class="block">
+      <span class="lab">Measured</span>
+      <div class="rows">
+        <div class="row"><span class="k">Footprint</span><span class="v">${fmt(bb.x1-bb.x0)} × ${fmt(bb.y1-bb.y0)}</span></div>
+        <div class="row"><span class="k">Height</span><span class="v big">${fmt(o.heightMm)}</span></div>
+      </div>
+      <div class="slider" style="margin-top:12px">
+        <span class="lab" style="min-width:52px">Height</span>
+        <input type="range" id="hgt" min="1" max="40" step="0.5" value="${o.heightMm/FT}">
+      </div>
+      <p class="note" style="margin-top:7px">Height plus solar position is all Phase&nbsp;4 needs
+        to cast this shadow across the site for any day of the year.</p>
+      <div style="margin-top:11px"><button class="del" id="delObs">Delete</button></div>
+    </div>`;
+  gripv.textContent = fmt(o.heightMm) + " tall";
+  inspBody.querySelector("#nm").addEventListener("change", e=>{
+    snapshot(); o.name = e.target.value || "Obstruction"; render(); });
+  inspBody.querySelector("#hgt").addEventListener("input", e=>{
+    o.heightMm = +e.target.value * FT; render(); });
+  inspBody.querySelector("#delObs").addEventListener("click", ()=>{
+    snapshot(); state.obs = state.obs.filter(x=>x.id!==o.id); state.sel=null; render(); });
+}
+
+function plantInspector(p){
+  const isDrift = p.kind === "drift";
+  const poly = isDrift ? ringPoly(p.ring) : null;
+  const area = isDrift ? polyArea(poly) : Math.PI*p.r*p.r;
+  inspBody.innerHTML = `
+    <div class="block">
+      <span class="lab">${isDrift?"Drift":"Specimen"}</span>
+      <input class="namebox" id="nm" value="${p.name.replace(/"/g,"&quot;")}">
+      <p class="note" style="margin-top:8px">${isDrift
+        ? "A mass of one species. Drawn freehand with <b>no snapping at all</b> — snapping a drift to a grid would imply a precision that isn't real (D-020)."
+        : "A single plant with a footprint that grows as it matures."}</p>
+    </div>
+    <div class="block">
+      <span class="lab">Measured</span>
+      <div class="rows">
+        <div class="row"><span class="k">Area</span><span class="v big">${fmtArea(area)}</span></div>
+        ${isDrift?`<div class="row"><span class="k">Plants</span><span class="v">${p.count}</span></div>
+        <div class="row"><span class="k">Density</span><span class="v">${(area/(FT*FT)/p.count).toFixed(1)} sq ft each</span></div>`
+        :`<div class="row"><span class="k">Spread</span><span class="v">${fmt(p.r*2)}</span></div>`}
+      </div>
+      ${isDrift?`<div class="slider" style="margin-top:12px">
+        <span class="lab" style="min-width:52px">Count</span>
+        <input type="range" id="cnt" min="3" max="90" step="1" value="${p.count}">
+        <span class="mono" style="min-width:26px;text-align:right">${p.count}</span></div>`
+      :`<div class="slider" style="margin-top:12px">
+        <span class="lab" style="min-width:52px">Spread</span>
+        <input type="range" id="spr" min="0.5" max="12" step="0.25" value="${p.r*2/FT}">
+        <span class="mono" style="min-width:44px;text-align:right">${fmt(p.r*2)}</span></div>`}
+      <div style="margin-top:11px"><button class="del" id="delPl">Delete</button></div>
+    </div>`;
+  gripv.textContent = isDrift ? p.count + " plants" : fmt(p.r*2) + " spread";
+  inspBody.querySelector("#nm").addEventListener("change", e=>{
+    snapshot(); p.name = e.target.value || "Planting"; render(); });
+  const cnt = inspBody.querySelector("#cnt");
+  if(cnt) cnt.addEventListener("input", e=>{ p.count = +e.target.value; render(); });
+  const spr = inspBody.querySelector("#spr");
+  if(spr) spr.addEventListener("input", e=>{ p.r = +e.target.value*FT/2; render(); });
+  inspBody.querySelector("#delPl").addEventListener("click", ()=>{
+    snapshot(); state.plants = state.plants.filter(x=>x.id!==p.id); state.sel=null; render(); });
+}
+
+/* ============================================================
+   Tools
+   ============================================================ */
+const ICONS = {
+  select:'<path d="M5 3l13 8-6 1.4L9.6 19z" fill="currentColor"/>',
+  tpl:'<rect x="3" y="5" width="8" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="5" width="8" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  poly:'<path d="M4 5h11v7h-6v7H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  free:'<path d="M3 15c4-9 8 6 12-2s5 1 6 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  hole:'<circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2.4"/><rect x="3.5" y="3.5" width="17" height="17" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".45"/>',
+  drift:'<path d="M4 13c2-5 7-6 10-3s6 1 6 4-4 5-8 4-10 0-8-5z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="13" cy="14" r="1" fill="currentColor"/><circle cx="16" cy="11" r="1" fill="currentColor"/>',
+  spec:'<circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"/><circle cx="12" cy="12" r="2" fill="currentColor"/>',
+  obs:'<path d="M4 20V9l8-5 8 5v11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
+};
+const TOOLS = [
+  {id:"select", label:"Select", icon:"select"},
+  {gap:true},
+  {id:"tpl",  label:"Template", icon:"tpl"},
+  {id:"poly", label:"Bed", icon:"poly"},
+  {id:"free", label:"Curved", icon:"free"},
+  {id:"hole", label:"Hole", icon:"hole"},
+  {gap:true},
+  {id:"drift", label:"Drift", icon:"drift"},
+  {id:"spec",  label:"Specimen", icon:"spec"},
+  {gap:true},
+  {id:"obs", label:"Shadow", icon:"obs"}
+];
+const HINTS = {
+  select:"Tap a bed to select. Drag a <b>handle</b> to move a corner — it lifts above your finger so you can see it. Tap a <b>dimension chip</b> to type an exact length.",
+  tpl:"Tap the plan to drop a <b>4′ × 8′</b> bed. Most raised beds are standard sizes — start from a shape, not a blank canvas.",
+  poly:"Tap to place corners. Snapping holds each edge to <b>15°</b> and rounds its length. Tap the first corner, or <b>Finish</b>, to close.",
+  free:"Drag to draw a curved bed. The stroke is simplified, then splined — <b>no angle snapping</b>, because curves don't have corners.",
+  hole:"Drag a circle inside a bed to cut a hole — the tree, the downspout, the stump. Cells around it lose coverage automatically.",
+  drift:"Drag a blob inside a native bed to place a drift. <b>Nothing snaps.</b> Set the plant count in the inspector.",
+  spec:"Tap inside a bed to place one shrub or tree. Its footprint grows with maturity.",
+  obs:"Drag a rectangle for a fence, shed or wall. Set its height in the inspector — that's all Phase 4 needs to cast its shadow."
+};
+
+const rail = document.getElementById("rail");
+TOOLS.forEach(t=>{
+  if(t.gap){ rail.appendChild(Object.assign(document.createElement("div"),{className:"railgap"})); return; }
+  const b = document.createElement("button");
+  b.className = "tool"; b.dataset.tool = t.id;
+  b.setAttribute("aria-pressed", String(t.id === state.tool));
+  b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[t.icon]}</svg><i>${t.label}</i>`;
+  b.addEventListener("click", ()=>setTool(t.id));
+  rail.appendChild(b);
+});
+
+function setTool(id){
+  state.tool = id;
+  state.draft = null;
+  rail.querySelectorAll(".tool").forEach(b=>
+    b.setAttribute("aria-pressed", String(b.dataset.tool === id)));
+  stage.classList.toggle("select", id === "select");
+  document.getElementById("hint").innerHTML = HINTS[id];
+  document.getElementById("finish").classList.remove("on");
+  hideLenPop();
+  render();
+}
+
+/* ============================================================
+   Pointer interaction
+   ============================================================ */
+let drag = null, pointers = new Map(), pinch = null;
+
+svg.addEventListener("pointerdown", ev=>{
+  svg.setPointerCapture(ev.pointerId);
+  pointers.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
+  if(pointers.size === 2){
+    const [a,b] = [...pointers.values()];
+    pinch = {d:Math.hypot(a.x-b.x, a.y-b.y), w:state.view.w,
+             c:toWorld({clientX:(a.x+b.x)/2, clientY:(a.y+b.y)/2})};
+    drag = null; return;
+  }
+  const w = toWorld(ev);
+  const tgt = ev.target;
+
+  if(state.tool === "select"){
+    if(tgt.dataset && tgt.dataset.vert){
+      const [id, i] = tgt.dataset.vert.split(":");
+      snapshot();
+      drag = {mode:"vertex", id, i:+i, lift:pxToWorld(46)};
+      return;
+    }
+    if(tgt.dataset && tgt.dataset.edge){
+      openLenPop(tgt.dataset.edge, ev);
+      return;
+    }
+    if(tgt.dataset && tgt.dataset.pick){
+      const [type,id] = tgt.dataset.pick.split(":");
+      state.sel = {type, id};
+      hideLenPop(); render(); return;
+    }
+    const hit = hitPlanting(w);
+    if(hit){ state.sel = {type:"plant", id:hit.id}; hideLenPop(); render(); return; }
+    state.sel = null; hideLenPop();
+    drag = {mode:"pan", sx:ev.clientX, sy:ev.clientY, vx:state.view.x, vy:state.view.y};
+    stage.querySelector("#plan").classList.add("panning");
+    render(); return;
+  }
+
+  if(state.tool === "tpl"){
+    snapshot();
+    const p = snapPoint(w, null);
+    const b = {id:nid("bed"), name:"New bed " + (state.beds.length+1), purpose:"annualVeg",
+      ring:{points:[{x:p.x,y:p.y},{x:p.x+4*FT,y:p.y},{x:p.x+4*FT,y:p.y+8*FT},{x:p.x,y:p.y+8*FT}],
+      curved:false}, holes:[], cellMm:FT, gridRot:0, target:{w:4,h:8}};
+    state.beds.push(b);
+    state.sel = {type:"bed", id:b.id};
+    setTool("select"); return;
+  }
+
+  if(state.tool === "poly"){
+    const from = state.draft && state.draft.pts.length
+      ? state.draft.pts[state.draft.pts.length-1] : null;
+    const p = snapPoint(w, from);
+    if(!state.draft) state.draft = {kind:"poly", pts:[], cursor:null};
+    const pts = state.draft.pts;
+    if(pts.length > 2 && dist(p, pts[0]) < pxToWorld(16)){ finishDraft(); return; }
+    pts.push(p);
+    document.getElementById("finish").classList.toggle("on", pts.length >= 3);
+    render(); return;
+  }
+
+  if(["free","hole","drift","obs"].includes(state.tool)){
+    state.draft = {kind:state.tool, pts:[w], cursor:w, raw:[w], origin:w};
+    drag = {mode:"stroke"};
+    return;
+  }
+
+  if(state.tool === "spec"){
+    const bed = bedAt(w);
+    if(!bed){ flashHint("Place a specimen inside a bed."); return; }
+    snapshot();
+    const p = {id:nid("pl"), bedId:bed.id, name:"New specimen", kind:"point",
+      x:w.x, y:w.y, r:1.5*FT};
+    state.plants.push(p);
+    state.sel = {type:"plant", id:p.id};
+    setTool("select"); return;
+  }
+});
+
+svg.addEventListener("pointermove", ev=>{
+  if(pointers.has(ev.pointerId)) pointers.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
+  if(pinch && pointers.size === 2){
+    const [a,b] = [...pointers.values()];
+    const d = Math.hypot(a.x-b.x, a.y-b.y);
+    if(d > 4){
+      state.view.w = clamp(pinch.w * pinch.d / d, 1.2*FT, 400*FT);
+      render();
+    }
+    return;
+  }
+  const w = toWorld(ev);
+
+  if(drag && drag.mode === "pan"){
+    const r = stage.getBoundingClientRect();
+    const k = state.view.w / Math.max(r.width,1);
+    state.view.x = drag.vx - (ev.clientX - drag.sx)*k;
+    state.view.y = drag.vy - (ev.clientY - drag.sy)*k;
+    render(); return;
+  }
+  if(drag && drag.mode === "vertex"){
+    const o = findById(drag.id);
+    if(!o || !o.ring) return;
+    const lifted = {x:w.x, y:w.y - drag.lift};
+    const prev = o.ring.points[(drag.i - 1 + o.ring.points.length) % o.ring.points.length];
+    o.ring.points[drag.i] = o.ring.curved ? lifted : snapPoint(lifted, prev);
+    render(); return;
+  }
+  if(drag && drag.mode === "stroke" && state.draft){
+    const d = state.draft;
+    d.cursor = w;
+    if(d.kind === "free" || d.kind === "drift"){
+      d.raw.push(w);
+    } else {
+      const a = d.origin;
+      d.pts = d.kind === "obs"
+        ? [a, {x:w.x,y:a.y}, w, {x:a.x,y:w.y}].map(p=>state.snap.on?snapPoint(p,null):p)
+        : circleRing(0,0,1,14).points.map(v=>({
+            x:(a.x+w.x)/2 + v.x/FT*Math.abs(w.x-a.x)/2,
+            y:(a.y+w.y)/2 + v.y/FT*Math.abs(w.y-a.y)/2}));
+    }
+    render(); return;
+  }
+  if(state.tool === "poly" && state.draft){
+    const pts = state.draft.pts;
+    state.draft.cursor = pts.length ? snapPoint(w, pts[pts.length-1]) : w;
+    render();
+  }
+});
+
+function endPointer(ev){
+  pointers.delete(ev.pointerId);
+  if(pointers.size < 2) pinch = null;
+  svg.querySelector && stage.querySelector("#plan").classList.remove("panning");
+  if(drag && drag.mode === "stroke"){ finishDraft(); }
+  drag = null;
+}
+svg.addEventListener("pointerup", endPointer);
+svg.addEventListener("pointercancel", endPointer);
+
+svg.addEventListener("wheel", ev=>{
+  ev.preventDefault();
+  const w = toWorld(ev);
+  zoomAt(w.x, w.y, ev.deltaY > 0 ? 1.12 : 0.89);
+}, {passive:false});
+
+function finishDraft(){
+  const d = state.draft;
+  state.draft = null;
+  document.getElementById("finish").classList.remove("on");
+  if(!d){ return; }
+
+  if(d.kind === "poly"){
+    if(d.pts.length < 3){ render(); return; }
+    snapshot();
+    const b = {id:nid("bed"), name:"New bed " + (state.beds.length+1), purpose:"annualVeg",
+      ring:{points:d.pts, curved:false}, holes:[], cellMm:FT, gridRot:0, target:null};
+    state.beds.push(b);
+    state.sel = {type:"bed", id:b.id};
+    setTool("select"); return;
+  }
+
+  if(d.kind === "free" || d.kind === "drift"){
+    const simp = rdp(d.raw, pxToWorld(9));
+    if(simp.length < 3){ render(); return; }
+    snapshot();
+    const ring = {points:simp, curved:true};
+    if(d.kind === "free"){
+      const b = {id:nid("bed"), name:"Curved bed " + (state.beds.length+1), purpose:"native",
+        ring, holes:[], cellMm:FT, gridRot:0, target:null};
+      state.beds.push(b);
+      state.sel = {type:"bed", id:b.id};
+    } else {
+      const bed = bedAt(centroid(simp));
+      if(!bed){ flashHint("Drifts go inside a bed — draw the bed first."); render(); return; }
+      const p = {id:nid("pl"), bedId:bed.id, name:"New drift", kind:"drift", ring, count:18};
+      state.plants.push(p);
+      state.sel = {type:"plant", id:p.id};
+    }
+    setTool("select"); return;
+  }
+
+  if(d.kind === "hole"){
+    if(d.pts.length < 3){ render(); return; }
+    const bed = bedAt(centroid(d.pts));
+    if(!bed){ flashHint("Holes are cut inside a bed."); render(); return; }
+    snapshot();
+    bed.holes.push({points:d.pts, curved:true});
+    state.sel = {type:"bed", id:bed.id};
+    setTool("select"); return;
+  }
+
+  if(d.kind === "obs"){
+    if(d.pts.length < 3){ render(); return; }
+    const bb = bbox(d.pts);
+    if(bb.x1-bb.x0 < 60 || bb.y1-bb.y0 < 60){ render(); return; }
+    snapshot();
+    const o = {id:nid("obs"), kind:"structure", name:"New obstruction",
+      ring:{points:d.pts, curved:false}, heightMm:6*FT};
+    state.obs.push(o);
+    state.sel = {type:"obs", id:o.id};
+    setTool("select"); return;
+  }
+  render();
+}
+
+function findById(id){
+  return state.beds.find(b=>b.id===id) || state.obs.find(o=>o.id===id)
+      || state.plants.find(p=>p.id===id) || null;
+}
+function bedAt(w){
+  for(let i=state.beds.length-1;i>=0;i--){
+    if(pointInPoly(w, ringPoly(state.beds[i].ring))) return state.beds[i];
+  }
+  return null;
+}
+function hitPlanting(w){
+  for(let i=state.plants.length-1;i>=0;i--){
+    const p = state.plants[i];
+    if(p.kind === "drift" && pointInPoly(w, ringPoly(p.ring))) return p;
+    if(p.kind === "point" && dist(w, {x:p.x,y:p.y}) < p.r) return p;
+  }
+  return null;
+}
+let hintTimer = null;
+function flashHint(msg){
+  const h = document.getElementById("hint");
+  const keep = HINTS[state.tool];
+  h.innerHTML = "<b>" + msg + "</b>";
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(()=>{ h.innerHTML = keep; }, 2200);
+}
+
+/* ---------- editable edge lengths (D-024) ---------- */
+const lenpop = document.getElementById("lenpop");
+const lenval = document.getElementById("lenval");
+let lenEdge = null;
+
+function openLenPop(key, ev){
+  const [id, i] = key.split(":");
+  const o = findById(id);
+  if(!o || !o.ring) return;
+  lenEdge = {id, i:+i};
+  const pts = o.ring.points;
+  lenval.value = fmt(dist(pts[+i], pts[(+i+1)%pts.length])).replace(/[′″]/g, m=>m==="′"?"'":'"');
+  lenpop.classList.add("on");
+  positionLenPop(ev);
+  lenval.focus(); lenval.select();
+}
+function positionLenPop(ev){
+  if(!lenpop.classList.contains("on") || !lenEdge) return;
+  const r = stage.getBoundingClientRect();
+  if(ev){
+    lenpop.style.left = clamp(ev.clientX - r.left - 70, 8, r.width-190) + "px";
+    lenpop.style.top  = clamp(ev.clientY - r.top - 54, 8, r.height-56) + "px";
+  }
+}
+function hideLenPop(){ lenpop.classList.remove("on"); lenEdge = null; }
+
+function applyLen(){
+  if(!lenEdge) return;
+  const o = findById(lenEdge.id);
+  if(!o || !o.ring){ hideLenPop(); return; }
+  const want = parseLen(lenval.value);
+  if(want === null || want < 25){ hideLenPop(); return; }
+  snapshot();
+  const pts = o.ring.points, n = pts.length, i = lenEdge.i, j = (i+1)%n;
+  const a = pts[i], b = pts[j];
+  const L = dist(a,b) || 1;
+  const ux = (b.x-a.x)/L, uy = (b.y-a.y)/L;
+  const delta = want - L;
+
+  if(rectInfo(o.ring)){
+    /* rectangle rule set: move the edge's endpoint AND the far edge with it */
+    const k = (i+2)%n, l = (i+3)%n;
+    pts[j] = {x:b.x+ux*delta, y:b.y+uy*delta};
+    pts[k] = {x:pts[k].x+ux*delta, y:pts[k].y+uy*delta};
+    void l;
+  } else {
+    pts[j] = {x:b.x+ux*delta, y:b.y+uy*delta};
+  }
+  hideLenPop();
+  render();
+}
+document.getElementById("lenok").addEventListener("click", applyLen);
+lenval.addEventListener("keydown", e=>{
+  if(e.key === "Enter"){ e.preventDefault(); applyLen(); }
+  if(e.key === "Escape"){ hideLenPop(); }
+});
+
+/* ============================================================
+   Chrome wiring
+   ============================================================ */
+function segWire(id, attr, fn){
+  const seg = document.getElementById(id);
+  seg.addEventListener("click", ev=>{
+    const b = ev.target.closest("button"); if(!b) return;
+    seg.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(x===b)));
+    fn(b.dataset[attr]);
+  });
+}
+segWire("gridSeg","mm", v=>{ state.snap.gridMm = +v; });
+segWire("angSeg","deg", v=>{ state.snap.angDeg = +v; });
+segWire("unitSeg","u",  v=>{ units = v; render(); });
+
+const snapBtn = document.getElementById("snapOn");
+snapBtn.addEventListener("click", ()=>{
+  state.snap.on = !state.snap.on;
+  snapBtn.setAttribute("aria-pressed", String(state.snap.on));
+  flashHint(state.snap.on ? "Assists on — edges hold to 15° and round to the grid."
+                          : "Assists off — draw freehand and watch the accuracy check.");
+});
+document.getElementById("undoBtn").addEventListener("click", undo);
+document.getElementById("fitBtn").addEventListener("click", ()=>{ fit(); render(); });
+document.getElementById("zin").addEventListener("click", ()=>{
+  const r = stage.getBoundingClientRect();
+  const c = toWorld({clientX:r.left+r.width/2, clientY:r.top+r.height/2});
+  zoomAt(c.x, c.y, 0.8);
+});
+document.getElementById("zout").addEventListener("click", ()=>{
+  const r = stage.getBoundingClientRect();
+  const c = toWorld({clientX:r.left+r.width/2, clientY:r.top+r.height/2});
+  zoomAt(c.x, c.y, 1.25);
+});
+document.getElementById("finishBtn").addEventListener("click", finishDraft);
+document.getElementById("cancelBtn").addEventListener("click", ()=>{
+  state.draft = null;
+  document.getElementById("finish").classList.remove("on");
+  render();
+});
+document.getElementById("grip").addEventListener("click", ()=>
+  document.getElementById("insp").classList.toggle("open"));
+
+window.addEventListener("keydown", e=>{
+  if(e.target.tagName === "INPUT") return;
+  if((e.metaKey||e.ctrlKey) && e.key === "z"){ e.preventDefault(); undo(); }
+  if(e.key === "Escape"){ state.draft=null; hideLenPop();
+    document.getElementById("finish").classList.remove("on"); render(); }
+  const map = {v:"select", t:"tpl", b:"poly", c:"free", h:"hole", d:"drift", s:"spec", o:"obs"};
+  if(map[e.key]) setTool(map[e.key]);
+});
+function measureRail(){
+  const narrow = window.matchMedia("(max-width:900px)").matches;
+  document.documentElement.style.setProperty("--railh", narrow ? rail.offsetHeight+"px" : "0px");
+}
+window.addEventListener("resize", ()=>{ measureRail(); render(); });
+measureRail();
+
+setTool("select");
+state.sel = {type:"bed", id:state.beds[0].id};
+fit();
+render();
+</script>
