@@ -20,7 +20,10 @@ live (D-018) — then on a phone to find what has to change.
 | D-024 | Snap to grid (3″/6″/1′) and to angle (15°/90°), applied angle-first then length-along-the-ray |
 | D-024 | Editable edge lengths; rectangle-aware so one edge moves its opposite |
 | D-024 | Bed templates, RDP stroke simplification, Catmull–Rom splining |
-| D-024 | Offset vertex drag — the handle lifts ~46px above the finger |
+| D-024 | Two selection states: **move & scale** (transform box) and **reshape** (vertex handles) |
+| D-024 | Scale from a corner anchored at the opposite one; edge handles scale one axis |
+| D-024 | Rotate from a stem handle, snapped to the angle increment |
+| D-024 | Offset vertex drag in reshape mode — the handle lifts ~46px above the finger |
 | D-023 | Obstructions as rings with a height, ready for Phase 4's shadow casting |
 | D-009 | Millimetres internally, ft·in displayed, metric toggle |
 
@@ -38,6 +41,9 @@ live (D-018) — then on a phone to find what has to change.
    phone at a realistic zoom.
 4. **Does the offset vertex drag actually solve finger occlusion**, or does the
    lift feel disconnected from the finger?
+5. **Is the move/scale versus reshape split discoverable?** Double-tap toggles it
+   and the inspector has an explicit pair of buttons. The risk is that reshape is
+   *too* hidden, or that double-tap fires by accident while panning.
 
 ## Deliberately not in this spike
 

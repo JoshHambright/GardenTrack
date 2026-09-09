@@ -532,3 +532,38 @@ arrangements or nothing. The bundled plant catalog's regional scope, support
 burden, and data-protection obligations all shift too.
 
 **Status:** ✅ Accepted as a constraint set · pricing and packaging ❔ deferred
+
+---
+
+### D-026 · Move, scale and reshape are three operations, chosen by what you grab
+**Chose:** A selected bed shows a **transform box** by default — drag the bed
+body to move it, drag a square corner handle to scale from the opposite corner,
+drag an edge handle to scale one axis, drag the stem above it to rotate, and tap
+the overall width or height to type an exact size. **Reshape** — dragging
+individual vertices — is a second state, entered by double-tapping the bed or by
+an explicit toggle in the inspector.
+**Why:** The first prototype only had vertex handles, which meant a bed could be
+distorted but never *moved* and never *resized* — dragging one corner of a 4×8
+turned it into a trapezoid. Those are three genuinely different intents and the
+common two were missing.
+
+Choosing the operation by **what you grab** rather than by a mode picked
+beforehand is the standard direct-manipulation answer and keeps the common cases
+modeless. Reshape has to be a state rather than a fourth handle type because on a
+rectangle the vertices and the scale corners are the same four points — showing
+both at once would put eight overlapping targets on a phone.
+**Details that matter:**
+- **Snap the resulting dimension, not the handle position.** You want a bed that
+  reads 4′ 0″, which is not the same as a corner landing on a grid intersection
+  when the anchor is off-grid.
+- **Holes scale with the bed** — they're part of its geometry. **Plantings don't**
+  — they're real plants in real places, and a bed being re-measured shouldn't
+  drag a serviceberry across the garden.
+- **Cell size never scales.** Resizing a bed changes how many 1 ft cells it holds,
+  not how big they are.
+- **Shrinking a bed can strand planted cells.** In the prototype they simply
+  vanish; the real app owes the gardener a warning naming what would be lost
+  before it commits.
+**Costs:** Two selection states to teach, and double-tap as a gesture that could
+misfire during a pan. Both are exactly what Spike A is for.
+**Status:** ✅ Accepted

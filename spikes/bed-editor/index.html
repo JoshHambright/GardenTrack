@@ -275,6 +275,11 @@ button{font:inherit;color:inherit}
 .dimline{stroke:var(--accent);stroke-width:1px;vector-effect:non-scaling-stroke;fill:none}
 .dimtick{stroke:var(--accent);stroke-width:1px;vector-effect:non-scaling-stroke}
 .handle{fill:var(--panel);stroke:var(--accent);stroke-width:2px;vector-effect:non-scaling-stroke;cursor:grab}
+.tbox{fill:none;stroke:var(--accent);stroke-width:1px;stroke-dasharray:5 4;vector-effect:non-scaling-stroke;opacity:.65}
+.hbox{fill:var(--panel);stroke:var(--accent);stroke-width:2px;vector-effect:non-scaling-stroke;cursor:pointer}
+.hrot{fill:var(--accent);stroke:var(--panel);stroke-width:1.5px;vector-effect:non-scaling-stroke;cursor:pointer}
+.rotstem{stroke:var(--accent);stroke-width:1px;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+.movepad{fill:transparent;cursor:move}
 .ghostline{stroke:var(--accent);stroke-width:1.5px;stroke-dasharray:6 4;vector-effect:non-scaling-stroke;fill:none}
 .driftdot{fill:var(--plant);opacity:.85}
 .spec{fill:var(--plant-wash);stroke:var(--plant);stroke-width:1.5px;vector-effect:non-scaling-stroke}
@@ -569,7 +574,7 @@ function circleRing(cx,cy,r,n){
 
 const state = {
   beds:[], obs:[], plants:[],
-  tool:"select", sel:null,
+  tool:"select", sel:null, reshape:false,
   snap:{on:true, gridMm:152.4, angDeg:15},
   draft:null, view:{x:0,y:0,w:1},
   history:[]
@@ -703,6 +708,29 @@ function snapPoint(p, from){
 const NS = "http://www.w3.org/2000/svg";
 const el = (n,a) => { const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); return e; };
 
+/* the polygon that bounds a selection, whatever kind it is */
+function selPoly(o){
+  if(o.ring) return ringPoly(o.ring);
+  if(o.kind === "point") return circleRing(0,0,1,12).points
+    .map(v=>({x:o.x + v.x/FT*o.r, y:o.y + v.y/FT*o.r}));
+  return [];
+}
+/* snapshot every movable point so a drag re-applies from the original, never compounds */
+function capture(o){
+  return JSON.parse(JSON.stringify({
+    ring:o.ring||null, holes:o.holes||null,
+    x:o.x, y:o.y, r:o.r
+  }));
+}
+function applyTransform(o, orig, fn){
+  if(orig.ring){ o.ring.points = orig.ring.points.map(fn); }
+  if(orig.holes){ o.holes = orig.holes.map((h,i)=>({...h, points:orig.holes[i].points.map(fn)})); }
+  if(orig.x !== undefined && o.kind === "point"){
+    const c = fn({x:orig.x, y:orig.y});
+    o.x = c.x; o.y = c.y;
+  }
+}
+
 function findSel(){
   if(!state.sel) return null;
   const {type,id} = state.sel;
@@ -770,7 +798,7 @@ function render(){
     }
 
     const bp = ringPoly(b.ring), bb = bbox(bp);
-    const nm = el("text",{x:(bb.x0+bb.x1)/2, y:bb.y0 - pxToWorld(9),
+    const nm = el("text",{x:(bb.x0+bb.x1)/2, y:bb.y0 - pxToWorld(26),
       class:"bedname", "text-anchor":"middle", "font-size":pxToWorld(12)});
     nm.textContent = b.name;
     gBed.appendChild(nm);
@@ -809,9 +837,50 @@ function render(){
     }
   }
 
-  /* selection overlay: dimension lines, handles, editable length chips */
+  /* selection overlay */
   const s = findSel();
-  if(s && s.ring && state.tool === "select"){
+  const canEdit = s && (s.ring || s.kind === "point") && state.tool === "select";
+
+  if(canEdit && !state.reshape){
+    /* --- transform box: move by the body, scale from a handle, rotate from the stem --- */
+    const bb = bbox(selPoly(s));
+    const pad = pxToWorld(11);
+    const x0=bb.x0-pad, y0=bb.y0-pad, x1=bb.x1+pad, y1=bb.y1+pad;
+    const cx=(x0+x1)/2, cy=(y0+y1)/2;
+
+    gOv.appendChild(el("rect",{x:x0, y:y0, width:x1-x0, height:y1-y0, class:"tbox"}));
+
+    const ry = y0 - pxToWorld(26);
+    gOv.appendChild(el("line",{x1:cx, y1:y0, x2:cx, y2:ry, class:"rotstem"}));
+    const rh = el("circle",{cx:cx, cy:ry, r:pxToWorld(6.5), class:"hrot"});
+    rh.dataset.rot = s.id;
+    gOv.appendChild(rh);
+
+    const h = pxToWorld(6);
+    [["nw",x0,y0],["n",cx,y0],["ne",x1,y0],["e",x1,cy],
+     ["se",x1,y1],["s",cx,y1],["sw",x0,y1],["w",x0,cy]].forEach(([k,hx,hy])=>{
+      const r = el("rect",{x:hx-h, y:hy-h, width:h*2, height:h*2, rx:pxToWorld(1.5), class:"hbox"});
+      r.dataset.sz = s.id + ":" + k;
+      gOv.appendChild(r);
+    });
+
+    /* overall W and H, both editable */
+    const chip = (label, mx, my, key) => {
+      const w = pxToWorld(label.length*6.6 + 12), hh = pxToWorld(17);
+      const r = el("rect",{x:mx-w/2, y:my-hh/2, width:w, height:hh,
+        rx:pxToWorld(3), class:"chiprect"});
+      r.dataset.dim = s.id + ":" + key;
+      gOv.appendChild(r);
+      const t = el("text",{x:mx, y:my+pxToWorld(3.8), class:"chiptext",
+        "text-anchor":"middle", "font-size":pxToWorld(11)});
+      t.textContent = label;
+      gOv.appendChild(t);
+    };
+    chip(fmt(bb.x1-bb.x0), cx, y1 + pxToWorld(14), "w");
+    chip(fmt(bb.y1-bb.y0), x0 - pxToWorld(24), cy, "h");
+  }
+
+  if(canEdit && state.reshape && s.ring){
     const pts = s.ring.points;
     const hR = pxToWorld(7);
     if(!s.ring.curved){
@@ -840,6 +909,14 @@ function render(){
       c.dataset.vert = s.id + ":" + i;
       gOv.appendChild(c);
     });
+  }
+
+  if(drag && drag.readout){
+    const bb = bbox(selPoly(findSel()||{ring:{points:[{x:0,y:0}],curved:false}}));
+    const t = el("text",{x:(bb.x0+bb.x1)/2, y:bb.y0 - pxToWorld(30),
+      class:"chiptext","text-anchor":"middle","font-size":pxToWorld(13)});
+    t.textContent = drag.readout;
+    gOv.appendChild(t);
   }
 
   /* in-progress draft */
@@ -984,6 +1061,13 @@ function bedInspector(b){
       <p class="note">${rectInfo(b.ring)
         ? "Recognised as a rectangle — editing one edge moves its opposite too."
         : "Not a rectangle, so a length edit moves just that vertex."}</p>
+      <div class="chips" style="margin-top:11px">
+        <button class="chip" id="rsOff" aria-pressed="${!state.reshape}">Move &amp; scale</button>
+        <button class="chip" id="rsOn"  aria-pressed="${state.reshape}">Reshape corners</button>
+      </div>
+      <p class="note" style="margin-top:7px">${state.reshape
+        ? "Round handles drag one corner at a time, lifted clear of your finger. Per-edge lengths are editable."
+        : "Square handles scale the whole bed from the opposite corner; the stem above rotates it. Double-tap the bed to switch."}</p>
       <div style="margin-top:11px"><button class="del" id="delBed">Delete bed</button></div>
     </div>`;
 
@@ -998,6 +1082,8 @@ function bedInspector(b){
     btn.addEventListener("click", ()=>{ snapshot(); b.cellMm = +btn.dataset.cell; render(); }));
   const gr = inspBody.querySelector("#grot");
   if(gr) gr.addEventListener("input", e=>{ b.gridRot = +e.target.value; render(); });
+  inspBody.querySelector("#rsOff").addEventListener("click", ()=>{ state.reshape=false; render(); });
+  inspBody.querySelector("#rsOn").addEventListener("click", ()=>{ state.reshape=true; render(); });
   inspBody.querySelector("#delBed").addEventListener("click", ()=>{
     snapshot();
     state.beds = state.beds.filter(x=>x.id!==b.id);
@@ -1106,7 +1192,7 @@ const TOOLS = [
   {id:"obs", label:"Shadow", icon:"obs"}
 ];
 const HINTS = {
-  select:"Tap a bed to select. Drag a <b>handle</b> to move a corner — it lifts above your finger so you can see it. Tap a <b>dimension chip</b> to type an exact length.",
+  select:"Drag the <b>bed</b> to move it · drag a <b>square handle</b> to scale from the opposite corner · drag the <b>stem</b> to rotate · tap a <b>dimension</b> to type an exact size. Double-tap a bed to reshape single corners.",
   tpl:"Tap the plan to drop a <b>4′ × 8′</b> bed. Most raised beds are standard sizes — start from a shape, not a blank canvas.",
   poly:"Tap to place corners. Snapping holds each edge to <b>15°</b> and rounds its length. Tap the first corner, or <b>Finish</b>, to close.",
   free:"Drag to draw a curved bed. The stroke is simplified, then splined — <b>no angle snapping</b>, because curves don't have corners.",
@@ -1142,7 +1228,7 @@ function setTool(id){
 /* ============================================================
    Pointer interaction
    ============================================================ */
-let drag = null, pointers = new Map(), pinch = null;
+let drag = null, pointers = new Map(), pinch = null, lastTap = 0;
 
 svg.addEventListener("pointerdown", ev=>{
   svg.setPointerCapture(ev.pointerId);
@@ -1157,6 +1243,30 @@ svg.addEventListener("pointerdown", ev=>{
   const tgt = ev.target;
 
   if(state.tool === "select"){
+    if(tgt.dataset && tgt.dataset.sz){
+      const [id, spot] = tgt.dataset.sz.split(":");
+      const o = findById(id); if(!o) return;
+      snapshot();
+      drag = {mode:"resize", id, spot, bb:bbox(selPoly(o)), orig:capture(o), readout:""};
+      return;
+    }
+    if(tgt.dataset && tgt.dataset.rot){
+      const o = findById(tgt.dataset.rot); if(!o) return;
+      snapshot();
+      const c = centroid(selPoly(o));
+      drag = {mode:"rotate", id:o.id, c, a0:Math.atan2(w.y-c.y, w.x-c.x), orig:capture(o), readout:""};
+      return;
+    }
+    if(tgt.dataset && tgt.dataset.move){
+      const o = findById(tgt.dataset.move); if(!o) return;
+      snapshot();
+      drag = {mode:"move", id:o.id, start:w, orig:capture(o), readout:"", moved:false};
+      return;
+    }
+    if(tgt.dataset && tgt.dataset.dim){
+      openLenPop(tgt.dataset.dim, ev);
+      return;
+    }
     if(tgt.dataset && tgt.dataset.vert){
       const [id, i] = tgt.dataset.vert.split(":");
       snapshot();
@@ -1169,12 +1279,23 @@ svg.addEventListener("pointerdown", ev=>{
     }
     if(tgt.dataset && tgt.dataset.pick){
       const [type,id] = tgt.dataset.pick.split(":");
+      const already = state.sel && state.sel.id === id;
+      const now = Date.now();
+      if(already && now - lastTap < 340){ state.reshape = !state.reshape; lastTap = 0; }
+      else { lastTap = now; if(!already) state.reshape = false; }
       state.sel = {type, id};
+      const o = findById(id);
+      if(o){ snapshot(); drag = {mode:"move", id, start:w, orig:capture(o), readout:"", moved:false}; }
       hideLenPop(); render(); return;
     }
     const hit = hitPlanting(w);
-    if(hit){ state.sel = {type:"plant", id:hit.id}; hideLenPop(); render(); return; }
-    state.sel = null; hideLenPop();
+    if(hit){
+      state.sel = {type:"plant", id:hit.id};
+      snapshot();
+      drag = {mode:"move", id:hit.id, start:w, orig:capture(hit), readout:"", moved:false};
+      hideLenPop(); render(); return;
+    }
+    state.sel = null; state.reshape = false; hideLenPop();
     drag = {mode:"pan", sx:ev.clientX, sy:ev.clientY, vx:state.view.x, vy:state.view.y};
     stage.querySelector("#plan").classList.add("panning");
     render(); return;
@@ -1187,7 +1308,7 @@ svg.addEventListener("pointerdown", ev=>{
       ring:{points:[{x:p.x,y:p.y},{x:p.x+4*FT,y:p.y},{x:p.x+4*FT,y:p.y+8*FT},{x:p.x,y:p.y+8*FT}],
       curved:false}, holes:[], cellMm:FT, gridRot:0, target:{w:4,h:8}};
     state.beds.push(b);
-    state.sel = {type:"bed", id:b.id};
+    state.sel = {type:"bed", id:b.id}; state.reshape = false;
     setTool("select"); return;
   }
 
@@ -1241,6 +1362,58 @@ svg.addEventListener("pointermove", ev=>{
     state.view.y = drag.vy - (ev.clientY - drag.sy)*k;
     render(); return;
   }
+  if(drag && drag.mode === "move"){
+    const o = findById(drag.id); if(!o) return;
+    let dx = w.x - drag.start.x, dy = w.y - drag.start.y;
+    if(Math.hypot(dx,dy) > pxToWorld(3)) drag.moved = true;
+    if(state.snap.on && state.snap.gridMm > 0){
+      dx = Math.round(dx/state.snap.gridMm)*state.snap.gridMm;
+      dy = Math.round(dy/state.snap.gridMm)*state.snap.gridMm;
+    }
+    applyTransform(o, drag.orig, p => ({x:p.x+dx, y:p.y+dy}));
+    drag.readout = drag.moved ? "moved " + fmt(Math.hypot(dx,dy)) : "";
+    render(); return;
+  }
+
+  if(drag && drag.mode === "resize"){
+    const o = findById(drag.id); if(!o) return;
+    const bb = drag.bb, sp = drag.spot;
+    const w0 = Math.max(bb.x1-bb.x0, 1), h0 = Math.max(bb.y1-bb.y0, 1);
+    const g = state.snap.on ? state.snap.gridMm : 0;
+    const MIN = 100;
+
+    let sx = 1, sy = 1, ax = bb.x0, ay = bb.y0;
+    if(sp.includes("e") || sp.includes("w")){
+      const east = sp.includes("e");
+      ax = east ? bb.x0 : bb.x1;
+      let nw = east ? (w.x - bb.x0) : (bb.x1 - w.x);
+      if(g > 0) nw = Math.round(nw/g)*g;
+      sx = Math.max(nw, MIN) / w0;
+    }
+    if(sp.includes("n") || sp.includes("s")){
+      const south = sp.includes("s");
+      ay = south ? bb.y0 : bb.y1;
+      let nh = south ? (w.y - bb.y0) : (bb.y1 - w.y);
+      if(g > 0) nh = Math.round(nh/g)*g;
+      sy = Math.max(nh, MIN) / h0;
+    }
+    applyTransform(o, drag.orig, p => ({x:ax+(p.x-ax)*sx, y:ay+(p.y-ay)*sy}));
+    if(o.kind === "point") o.r = Math.max(drag.orig.r * (sx+sy)/2, 60);
+    drag.readout = fmt(w0*sx) + " × " + fmt(h0*sy);
+    render(); return;
+  }
+
+  if(drag && drag.mode === "rotate"){
+    const o = findById(drag.id); if(!o) return;
+    let a = (Math.atan2(w.y-drag.c.y, w.x-drag.c.x) - drag.a0) * 180/Math.PI;
+    if(state.snap.on && state.snap.angDeg > 0){
+      a = Math.round(a/state.snap.angDeg)*state.snap.angDeg;
+    }
+    applyTransform(o, drag.orig, p => rot(p, drag.c, a));
+    drag.readout = (a>0?"+":"") + a.toFixed(a%1?1:0) + "°";
+    render(); return;
+  }
+
   if(drag && drag.mode === "vertex"){
     const o = findById(drag.id);
     if(!o || !o.ring) return;
@@ -1276,7 +1449,9 @@ function endPointer(ev){
   if(pointers.size < 2) pinch = null;
   svg.querySelector && stage.querySelector("#plan").classList.remove("panning");
   if(drag && drag.mode === "stroke"){ finishDraft(); }
+  const wasTransform = drag && ["move","resize","rotate"].includes(drag.mode);
   drag = null;
+  if(wasTransform) render();
 }
 svg.addEventListener("pointerup", endPointer);
 svg.addEventListener("pointercancel", endPointer);
@@ -1299,7 +1474,7 @@ function finishDraft(){
     const b = {id:nid("bed"), name:"New bed " + (state.beds.length+1), purpose:"annualVeg",
       ring:{points:d.pts, curved:false}, holes:[], cellMm:FT, gridRot:0, target:null};
     state.beds.push(b);
-    state.sel = {type:"bed", id:b.id};
+    state.sel = {type:"bed", id:b.id}; state.reshape = false;
     setTool("select"); return;
   }
 
@@ -1382,10 +1557,19 @@ let lenEdge = null;
 function openLenPop(key, ev){
   const [id, i] = key.split(":");
   const o = findById(id);
-  if(!o || !o.ring) return;
-  lenEdge = {id, i:+i};
-  const pts = o.ring.points;
-  lenval.value = fmt(dist(pts[+i], pts[(+i+1)%pts.length])).replace(/[′″]/g, m=>m==="′"?"'":'"');
+  if(!o) return;
+  const dim = (i === "w" || i === "h") ? i : null;
+  if(!dim && !o.ring) return;
+  lenEdge = dim ? {id, dim} : {id, i:+i};
+  let cur;
+  if(dim){
+    const bb = bbox(selPoly(o));
+    cur = dim === "w" ? bb.x1-bb.x0 : bb.y1-bb.y0;
+  } else {
+    const pts = o.ring.points;
+    cur = dist(pts[+i], pts[(+i+1)%pts.length]);
+  }
+  lenval.value = fmt(cur).replace(/[′″]/g, m=>m==="′"?"'":'"');
   lenpop.classList.add("on");
   positionLenPop(ev);
   lenval.focus(); lenval.select();
@@ -1403,10 +1587,22 @@ function hideLenPop(){ lenpop.classList.remove("on"); lenEdge = null; }
 function applyLen(){
   if(!lenEdge) return;
   const o = findById(lenEdge.id);
-  if(!o || !o.ring){ hideLenPop(); return; }
+  if(!o){ hideLenPop(); return; }
   const want = parseLen(lenval.value);
   if(want === null || want < 25){ hideLenPop(); return; }
   snapshot();
+
+  if(lenEdge.dim){
+    /* scale the whole selection on one axis, anchored at its top-left */
+    const bb = bbox(selPoly(o));
+    const w0 = Math.max(bb.x1-bb.x0,1), h0 = Math.max(bb.y1-bb.y0,1);
+    const sx = lenEdge.dim === "w" ? want/w0 : 1;
+    const sy = lenEdge.dim === "h" ? want/h0 : 1;
+    applyTransform(o, capture(o), p => ({x:bb.x0+(p.x-bb.x0)*sx, y:bb.y0+(p.y-bb.y0)*sy}));
+    if(o.kind === "point") o.r = o.r * (sx+sy)/2;
+    hideLenPop(); render(); return;
+  }
+  if(!o.ring){ hideLenPop(); return; }
   const pts = o.ring.points, n = pts.length, i = lenEdge.i, j = (i+1)%n;
   const a = pts[i], b = pts[j];
   const L = dist(a,b) || 1;
@@ -1479,6 +1675,7 @@ window.addEventListener("keydown", e=>{
   if((e.metaKey||e.ctrlKey) && e.key === "z"){ e.preventDefault(); undo(); }
   if(e.key === "Escape"){ state.draft=null; hideLenPop();
     document.getElementById("finish").classList.remove("on"); render(); }
+  if(e.key === "r" && state.sel){ state.reshape = !state.reshape; render(); return; }
   const map = {v:"select", t:"tpl", b:"poly", c:"free", h:"hole", d:"drift", s:"spec", o:"obs"};
   if(map[e.key]) setTool(map[e.key]);
 });
