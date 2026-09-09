@@ -278,6 +278,13 @@ dead-end on a phone — that has to be checked rather than assumed. In exchange 
 explicitly *don't* pay to make every feature equally pleasant everywhere: each
 feature area declares a primary tier and is allowed to be merely usable outside
 it.
+**Enforcement, learned the hard way in Spike A:** the visible size of a control
+and its hit target are two different numbers, and the component library owns the
+relationship — not each screen. Spike A drew 12&nbsp;px scale handles that were
+unhittable with a thumb, so resize appeared implemented and did nothing on a
+phone. The pattern is a small visible mark plus a ~48&nbsp;px transparent pad
+sized from `pointer: coarse`. Related: `touch-action` is per-element, so setting
+it on a canvas *container* does not reliably cover the canvas.
 **Consequence for the bed editor:** it gets designed at **landscape tablet**, not
 phone — direct touch plus enough canvas to see a whole bed is the combination it
 actually wants — then adapted down to phone and up to desktop. This is the one

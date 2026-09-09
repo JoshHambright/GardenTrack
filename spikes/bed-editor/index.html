@@ -141,7 +141,10 @@ button{font:inherit;color:inherit}
 
 /* ---------- stage ---------- */
 .stage{grid-area:stage;position:relative;overflow:hidden;background:var(--ground);touch-action:none}
-#plan{width:100%;height:100%;display:block;cursor:crosshair}
+#plan{
+  width:100%;height:100%;display:block;cursor:crosshair;
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+}
 #plan.panning{cursor:grabbing}
 .stage.select #plan{cursor:default}
 
@@ -738,6 +741,26 @@ function findSel(){
   return pool.find(o=>o.id===id) || null;
 }
 
+/* Handles are drawn at a readable size and hit at a thumb-sized one (D-018).
+   The visible mark and the touch target are two different rects. */
+function isCoarse(){ return window.matchMedia("(pointer: coarse)").matches; }
+function handleAt(g, x, y, key, dataAttr, shape){
+  const coarse = isCoarse();
+  const vis = pxToWorld(coarse ? 8 : 6);
+  const hit = pxToWorld(coarse ? 24 : 11);
+  if(shape === "circle"){
+    g.appendChild(el("circle",{cx:x, cy:y, r:vis, class:key ? "hrot" : "handle"}));
+  } else {
+    g.appendChild(el("rect",{x:x-vis, y:y-vis, width:vis*2, height:vis*2,
+      rx:pxToWorld(1.5), class:"hbox"}));
+  }
+  const pad = el("rect",{x:x-hit, y:y-hit, width:hit*2, height:hit*2,
+    fill:"none", "pointer-events":"all", style:"cursor:pointer"});
+  pad.dataset[dataAttr] = key === null ? "" : key;
+  g.appendChild(pad);
+  return pad;
+}
+
 function render(){
   svg.setAttribute("viewBox", viewBoxStr());
   svg.textContent = "";
@@ -850,27 +873,32 @@ function render(){
 
     gOv.appendChild(el("rect",{x:x0, y:y0, width:x1-x0, height:y1-y0, class:"tbox"}));
 
-    const ry = y0 - pxToWorld(26);
+    const coarse = isCoarse();
+    const ry = y0 - pxToWorld(coarse ? 40 : 26);
     gOv.appendChild(el("line",{x1:cx, y1:y0, x2:cx, y2:ry, class:"rotstem"}));
-    const rh = el("circle",{cx:cx, cy:ry, r:pxToWorld(6.5), class:"hrot"});
-    rh.dataset.rot = s.id;
-    gOv.appendChild(rh);
+    const rp = handleAt(gOv, cx, ry, s.id, "rot", "circle");
+    void rp;
 
-    const h = pxToWorld(6);
-    [["nw",x0,y0],["n",cx,y0],["ne",x1,y0],["e",x1,cy],
-     ["se",x1,y1],["s",cx,y1],["sw",x0,y1],["w",x0,cy]].forEach(([k,hx,hy])=>{
-      const r = el("rect",{x:hx-h, y:hy-h, width:h*2, height:h*2, rx:pxToWorld(1.5), class:"hbox"});
-      r.dataset.sz = s.id + ":" + k;
-      gOv.appendChild(r);
-    });
+    /* on a thumb, eight targets round a small bed overlap — keep the corners */
+    const onePx = pxToWorld(1);
+    const tight = coarse && Math.min((x1-x0)/onePx, (y1-y0)/onePx) < 150;
+    const spots = tight
+      ? [["nw",x0,y0],["ne",x1,y0],["se",x1,y1],["sw",x0,y1]]
+      : [["nw",x0,y0],["n",cx,y0],["ne",x1,y0],["e",x1,cy],
+         ["se",x1,y1],["s",cx,y1],["sw",x0,y1],["w",x0,cy]];
+    spots.forEach(([k,hx,hy]) => handleAt(gOv, hx, hy, s.id + ":" + k, "sz", "rect"));
 
     /* overall W and H, both editable */
     const chip = (label, mx, my, key) => {
-      const w = pxToWorld(label.length*6.6 + 12), hh = pxToWorld(17);
+      const w = pxToWorld(label.length*6.6 + 12), hh = pxToWorld(isCoarse() ? 24 : 17);
       const r = el("rect",{x:mx-w/2, y:my-hh/2, width:w, height:hh,
         rx:pxToWorld(3), class:"chiprect"});
-      r.dataset.dim = s.id + ":" + key;
       gOv.appendChild(r);
+      const padW = Math.max(w, pxToWorld(48)), padH = Math.max(hh, pxToWorld(44));
+      const pad = el("rect",{x:mx-padW/2, y:my-padH/2, width:padW, height:padH,
+        fill:"none", "pointer-events":"all", style:"cursor:pointer"});
+      pad.dataset.dim = s.id + ":" + key;
+      gOv.appendChild(pad);
       const t = el("text",{x:mx, y:my+pxToWorld(3.8), class:"chiptext",
         "text-anchor":"middle", "font-size":pxToWorld(11)});
       t.textContent = label;
@@ -896,18 +924,27 @@ function render(){
           x2:b.x+nx*off*0.55, y2:b.y+ny*off*0.55, class:"dimline", "stroke-opacity":0.4}));
         const label = fmt(len);
         const w = pxToWorld(label.length*6.6 + 12), h = pxToWorld(17);
-        const r = el("rect",{x:m2.x-w/2, y:m2.y-h/2, width:w, height:h, rx:pxToWorld(3), class:"chiprect"});
-        r.dataset.edge = s.id + ":" + i;
-        gOv.appendChild(r);
+        gOv.appendChild(el("rect",{x:m2.x-w/2, y:m2.y-h/2, width:w, height:h,
+          rx:pxToWorld(3), class:"chiprect"}));
+        const pw = Math.max(w, pxToWorld(46)), ph = Math.max(h, pxToWorld(42));
+        const ep = el("rect",{x:m2.x-pw/2, y:m2.y-ph/2, width:pw, height:ph,
+          fill:"none", "pointer-events":"all", style:"cursor:pointer"});
+        ep.dataset.edge = s.id + ":" + i;
+        gOv.appendChild(ep);
         const t = el("text",{x:m2.x, y:m2.y + pxToWorld(3.8), class:"chiptext", "text-anchor":"middle", "font-size":pxToWorld(11)});
         t.textContent = label;
         gOv.appendChild(t);
       }
     }
+    void hR;
     pts.forEach((p,i)=>{
-      const c = el("circle",{cx:p.x, cy:p.y, r:hR, class:"handle"});
-      c.dataset.vert = s.id + ":" + i;
-      gOv.appendChild(c);
+      gOv.appendChild(el("circle",{cx:p.x, cy:p.y,
+        r:pxToWorld(isCoarse() ? 9 : 7), class:"handle"}));
+      const hit = pxToWorld(isCoarse() ? 24 : 11);
+      const pad = el("rect",{x:p.x-hit, y:p.y-hit, width:hit*2, height:hit*2,
+        fill:"none", "pointer-events":"all", style:"cursor:grab"});
+      pad.dataset.vert = s.id + ":" + i;
+      gOv.appendChild(pad);
     });
   }
 

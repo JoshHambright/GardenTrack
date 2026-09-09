@@ -56,6 +56,28 @@ nothing. Spike B is a phone, a bed, and ten minutes.
 Also absent: persistence (nothing is saved — reload resets), multi-select,
 and the desktop three-pane shell.
 
+## Findings so far
+
+**Hit targets must be decoupled from visual size — and this is a build rule, not
+a preference.** The first pass drew scale handles at 12&nbsp;px and they were
+simply unhittable with a thumb; resize looked implemented and was not. D-018
+already said layout follows width while hit targets follow input, and the
+prototype still got it wrong, which is the argument for stating it as a rule the
+component library enforces rather than something each screen remembers.
+
+The fix is two rects per handle: a small visible mark and a 48&nbsp;px transparent
+pad carrying the data attribute, sized from `pointer: coarse`. Verified under
+touch emulation — the pad is the topmost element at the handle's centre, and a
+synthetic touch drag resizes the bed.
+
+Second finding, same cause: `touch-action: none` was set on the canvas container
+but **not on the `<svg>` itself**, so the browser could claim the gesture before
+the page saw it. It is a per-element property; setting it on an ancestor is not
+reliably enough.
+
+Third: eight handles round a small bed overlap badly on a phone. Below about
+150&nbsp;px of box the editor now shows corners only.
+
 ## Known rough edges
 
 - Undo is coarse — one snapshot per committed change, not per drag frame.
