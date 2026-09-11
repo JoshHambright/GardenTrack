@@ -1,0 +1,16 @@
+{
+  "_comment": "Copy to site.local.json and fill in. site.local.json is gitignored and must stay that way.",
+  "name": "Home",
+  "latitude": 0.0,
+  "longitude": 0.0,
+  "hardinessZone": "6a",
+  "heatZone": 6,
+  "regionIds": ["ecoregion3:55", "state:XX", "county:XX"],
+  "nativeStrictness": "ecoregion",
+  "frost": {
+    "thresholdF": 32,
+    "lastSpring": { "p10": "05-13", "p50": "04-29" },
+    "firstFall":  { "p10": "10-09", "p50": "10-18" },
+    "source": "provisional — replace with NOAA/MRCC station data"
+  }
+}

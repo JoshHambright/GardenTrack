@@ -3,7 +3,7 @@
 **This is the live source of truth for build progress.** Update it in the same
 commit as the work it describes.
 
-Last updated: 2026-09-09
+Last updated: 2026-09-11
 
 ---
 
@@ -42,9 +42,9 @@ titles: `P1-07: transform box for move, scale and rotate`.
 | — | Spikes | 2 | 1 | 🟨 Spike A published, iterating |
 | 0 | Foundation | 10 | 0 | ⬜ Next |
 | 1 | Site, beds, and the map | 17 | 0 | ⬜ |
-| 2 | Plant library, natives, seed inventory | — | — | ⛔ needs location |
-| 3 | Planning and the derived schedule | — | — | ⛔ needs location |
-| 4 | Light and shade | — | — | ⛔ needs location |
+| 2 | Plant library, natives, seed inventory | — | — | ⬜ unblocked |
+| 3 | Planning and the derived schedule | — | — | ⬜ unblocked |
+| 4 | Light and shade | — | — | ⬜ unblocked |
 | 5 | The in-season log | — | — | ⬜ |
 | 6 | Tasks and reminders | — | — | ⬜ |
 | 7 | Winter starts, succession, sourcing | — | — | ⬜ |
@@ -53,9 +53,13 @@ titles: `P1-07: transform box for move, scale and rotate`.
 | 10 | Environment and research | — | — | ⬜ |
 | 11 | Sync and multi-user | — | — | ⬜ |
 
-**Blocked on Josh:** a location (city + state, or zone and frost dates) unblocks
-phases 2, 3 and 4 — every schedule, every nativity claim and all the solar maths
-key off it. A photo of a real bed unblocks Spike B.
+**Unblocked.** Climate parameters are recorded in [CLIMATE.md](./CLIMATE.md):
+zone 6a/6b boundary, Eastern Corn Belt Plains, a provisional frost profile.
+The location itself stays out of the repo (D-027).
+
+**Still open:** the frost profile is from disagreeing published sources and wants
+real station probabilities (P2-00). Spike B wants **one measured bed edge** — the
+photos are usable, the scale is not assumed.
 
 ---
 
@@ -64,7 +68,7 @@ key off it. A photo of a real bed unblocks Spike B.
 | ID | Task | Status |
 |---|---|:---:|
 | SA-01 | Bed editor prototype — geometry, snapping, transform box, coverage readout, accuracy check | 🔬 Published, awaiting verdict |
-| SB-01 | Photo trace — four-corner homography on a real bed, in real light | ⛔ needs a photo |
+| SB-01 | Photo trace — four-corner homography on a real bed, in real light | 🟨 photos in hand, needs one measured edge |
 
 Findings so far are in [`spikes/bed-editor/README.md`](../spikes/bed-editor/README.md).
 The one that already changed a decision: hit targets must be decoupled from
@@ -119,6 +123,10 @@ measurement, not a guess.
 | P1-15 | Grid rotation independent of the bed's angle | ⬜ |
 | P1-16 | Units: metric stored, imperial displayed, switchable (D-009) | ⬜ |
 | P1-17 | Warn before a resize strands planted cells (D-026) | ⬜ |
+| P1-18 | **Rounded-corner bed template and detection** — the real beds are corrugated metal with radiused corners, which `rectInfo` does not recognise | ⬜ |
+| P1-19 | Obstruction presence window (`presentFrom`/`presentTo`) — covers shade cloth as well as deciduous canopy (D-023) | ⬜ |
+| P1-20 | Containers as first-class beds — there are more grow bags here than beds | ⬜ |
+| P1-21 | Paths / circulation space — beds here sit in gravel and mulch, not adjacent to each other | ⬜ |
 
 **Exit:** Josh's real garden entered — including at least one bed that isn't a
 rectangle — recognisable on a phone held outdoors in sunlight, with dimensions
@@ -133,7 +141,7 @@ Scope lines only until each is next. Full descriptions and exit criteria are in
 
 | Phase | Scope |
 |---|---|
-| 2 | Bundled catalog, USDA PLANTS nativity, zone filtering, seed and bulb inventory with computed viability |
+| 2 | **P2-00 first:** replace the provisional frost profile with NOAA/MRCC station probabilities. Then bundled catalog, USDA PLANTS nativity, zone filtering, seed and bulb inventory with computed viability |
 | 3 | Placement in three footprint modes, derived schedule both directions, perennial occupancy, companion evaluation, painted light |
 | 4 | Solar position, shadow casting from obstructions, the site light lattice, morning and afternoon kept apart |
 | 5 | Lifecycle events, one-tap harvest logging, photos, the ready-now queue, JSON export |

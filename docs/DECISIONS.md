@@ -574,3 +574,35 @@ both at once would put eight overlapping targets on a phone.
 **Costs:** Two selection states to teach, and double-tap as a gesture that could
 misfire during a pan. Both are exactly what Spike A is for.
 **Status:** ✅ Accepted
+
+---
+
+### D-027 · Frost dates are a distribution; the site's location is not in the repo
+**Chose:** `Site.frost` is a `FrostProfile` carrying a temperature threshold and
+p10/p50 dates for each end of the season, plus a `frostRisk` setting naming which
+percentile the planner reads. And the garden's **coordinates, address and
+photographs are kept out of source control** — they live in a gitignored
+`site.local.json` and in the running app's local storage.
+**Why a distribution:** researching one real site produced sources that disagreed
+by two weeks in both directions, for three compounding reasons — a 32 °F *freeze*
+and a 36 °F *frost* are different events about a fortnight apart; a "50% date"
+means half of all years frost after it; and the nearest long-record station was a
+city airport whose urban heat island makes it optimistic for a rural garden twenty
+miles out. Storing one date would have silently picked one of those answers and
+hidden the choice.
+
+A percentile also lets one profile serve different crops honestly: tomatoes plan
+against the cautious date, a cover crop against the typical one. It makes "why is
+the app telling me May 13?" a question with an answer.
+**Why the location is out of the repo:** a repository should be able to describe
+the climate a feature targets without disclosing whose garden it is. Photographs
+of a property show its layout and contents; an address plus a plant inventory is
+more than either alone. Local-first (D-002) already puts all of it on-device, so
+this costs nothing architecturally — it only requires not gratuitously copying it
+into git, where history is effectively permanent.
+**Costs:** contributors need `site.local.json` to run against real data;
+`site.local.example.json` documents the shape. Published climate parameters —
+zone, ecoregion, frost profile — stay in [CLIMATE.md](./CLIMATE.md), because they
+describe a region of millions of people and the native-plant and scheduling work
+cannot proceed without them.
+**Status:** ✅ Accepted

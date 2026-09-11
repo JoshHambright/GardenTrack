@@ -61,6 +61,7 @@ appliance) that shares these documentation conventions. Nothing else.
 | `docs/PRODUCT.md` | What we're building, principles, device tiers, feature inventory |
 | `docs/DATA_MODEL.md` | The domain model. **Read before ROADMAP.md** |
 | `docs/ROADMAP.md` | 12 phases, each with an exit criterion |
+| `docs/CLIMATE.md` | Target climate — zone, ecoregion, frost profile. Names no place |
 | `docs/DECISIONS.md` | ADR log. Read before changing an approach |
 | `docs/TRACKING.md` | Live tracker — update in the same commit as the work |
 | `spikes/` | Working prototypes. Each has a README on what it proved |
@@ -113,11 +114,27 @@ Do not rediscover or re-argue these. Full reasoning is in `docs/DECISIONS.md`.
   nativity base layer (D-006, D-012).
 - **Nativity is a set of regions with a stated scale**, never a boolean. "Native"
   without a scale is a marketing word (D-012).
+- **Frost dates are a distribution, not a date** (D-027). A 50% date means half of
+  all years frost after it; the planner reads the percentile `frostRisk` names.
 - **Photo-to-bed is a four-tap tracing aid, not an auto-detector** (D-015).
 - **Vendor sourcing is a cache with a TTL**, never catalog truth, and respects
   `robots.txt` and rate limits. We drive traffic *to* independent growers (D-014).
 - **Layout follows width; hit targets follow input** (D-018).
 - **No CRDT library.** Field-level last-write-wins is the right ceiling (D-008).
+
+## Privacy
+
+**The garden's location never enters source control.** No address, town,
+postcode or coordinates, and no photographs of the property — git history is
+effectively permanent, and an address plus a plant inventory is more than either
+alone (D-027).
+
+- Real site data → `site.local.json`, gitignored. `site.local.example.json`
+  documents the shape.
+- Photographs → the app's local storage only. Never copied into the repo, never
+  into a commit message, never into an artifact.
+- Publishable climate parameters — zone, ecoregion, frost profile — live in
+  `docs/CLIMATE.md` and name no place.
 
 ## Secrets
 

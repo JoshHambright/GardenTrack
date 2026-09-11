@@ -56,10 +56,28 @@ differently and each gates a different feature, so they're stored separately.
 ```
 Region { id, kind, code, name }        // kind: ecoregion3 | ecoregion4 | state | county
 Site   { id, name, latitude?, longitude?,
-         hardinessZone, heatZone?, lastFrostDate, firstFrostDate,
+         hardinessZone, heatZone?,
+         frost: FrostProfile,
          regionIds[],                  // resolved from lat/lng, user-overridable
-         nativeStrictness }            // ecoregion | state | continent | off
+         nativeStrictness,             // ecoregion | state | continent | off
+         frostRisk }                   // cautious | typical — which percentile plans use
+
+FrostProfile {
+  thresholdF,                          // 32 (freeze) or 36 (frost) — not the same event
+  lastSpring: { p10, p50, p90? },      // month-day
+  firstFall:  { p10, p50, p90? },
+  source, stationId?
+}
 ```
+
+**Frost dates are a distribution, not a date** (D-027). A "50% last frost" means
+half of all years frost *after* it — the wrong number to set tomatoes out on. The
+planner reads the percentile named by `frostRisk`, so a tender transplant can use
+the cautious date while a cover crop uses the typical one, from the same profile.
+
+⚠️ A site's real numbers belong to a *place*, and this repository does not hold
+one. Coordinates and the local profile live in a gitignored `site.local.json`;
+see [CLIMATE.md](./CLIMATE.md).
 
 `nativeStrictness` matters more than it looks. "Native" with no scale attached is
 a marketing word. The user picks how strict the badge is, and the app is honest
@@ -471,6 +489,10 @@ LightSample { siteId, x, y, monthOfYear,
   which is why they cost so little to add.
 - `opacity` gives dappled shade a truthful value. A deciduous canopy in leaf
   passes light; a shed does not.
+- `leafOutMonth`/`leafDropMonth` are really a **presence window**, not a botanical
+  fact. Shade cloth over a summer bed is an obstruction that exists for part of
+  the year by choice rather than by biology, and it wants exactly the same field.
+  Name the pair `presentFrom`/`presentTo` and both cases are covered.
 
 #### Three sources, one field
 

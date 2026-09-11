@@ -1,0 +1,21 @@
+# --- Private to this garden. Never commit. ---
+site.local.json
+*.local.json
+!*.local.example.json
+/private/
+photos/
+*.heic
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Build + tooling
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+.DS_Store
