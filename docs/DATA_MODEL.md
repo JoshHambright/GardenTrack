@@ -55,12 +55,18 @@ differently and each gates a different feature, so they're stored separately.
 
 ```
 Region { id, kind, code, name }        // kind: ecoregion3 | ecoregion4 | state | county
-Site   { id, name, latitude?, longitude?,
+Site   { id, name, cell: GeoCell,      // never raw coordinates — D-028
          hardinessZone, heatZone?,
          frost: FrostProfile,
          regionIds[],                  // resolved from lat/lng, user-overridable
          nativeStrictness,             // ecoregion | state | continent | off
          frostRisk }                   // cautious | typical — which percentile plans use
+
+GeoCell {
+  lat, lon,                            // rounded to a grid, never the input value
+  precisionDeg,                        // 0.1 default ≈ a 95 km² cell
+  method                               // 'rounded' — never 'jittered'
+}
 
 FrostProfile {
   thresholdF,                          // 32 (freeze) or 36 (frost) — not the same event
@@ -75,9 +81,17 @@ half of all years frost *after* it — the wrong number to set tomatoes out on. 
 planner reads the percentile named by `frostRisk`, so a tender transplant can use
 the cautious date while a cover crop uses the typical one, from the same profile.
 
-⚠️ A site's real numbers belong to a *place*, and this repository does not hold
-one. Coordinates and the local profile live in a gitignored `site.local.json`;
-see [CLIMATE.md](./CLIMATE.md).
+**There is no field for a precise position, deliberately** (D-028). `GeoCell` is
+built by one constructor — `coarsen(lat, lon, precisionDeg)` — which rounds; raw
+coordinates live as locals for the length of that call and are never returned or
+stored. Rounded to a shared grid, *not* jittered: a random offset averages back to
+the true point under repeated observation and makes every computation
+irreproducible.
+
+It costs the app nothing. 0.1° shifts computed sun-hours by a minute or two a day
+at the solstices, against a decision the gardener rounds to "about six hours"
+anyway. Reasoning and threat model: [PRIVACY.md](./PRIVACY.md). This repo's own
+climate parameters: [CLIMATE.md](./CLIMATE.md).
 
 `nativeStrictness` matters more than it looks. "Native" with no scale attached is
 a marketing word. The user picks how strict the badge is, and the app is honest
@@ -265,6 +279,18 @@ enter one measured edge, and the homography rectifies it to a top-down plan you
 can lay a grid on. **History:** flag one angle as the bed's `photoPoint` and
 every later shot from that spot stacks into an aligned time-lapse. See D-015 for
 why this is a tracing aid and not an auto-detector.
+
+### Photo
+```
+Photo { id, blob, capturedAt, width, height, bytes, plantingId?, bedId? }
+```
+Downscaled on capture, and **EXIF stripped before the blob is ever written**
+(D-028). A phone photo of a bed carries that bed's coordinates in its metadata,
+and storing it unstripped quietly defeats every other location protection in the
+app — this is the easiest of them to forget and the most complete to lose.
+
+Photos are ~95% of stored bytes, so the budget needs to be visible in the UI
+(P0-08), and they are separately quota-able for sync (D-025).
 
 ### Variety
 ```

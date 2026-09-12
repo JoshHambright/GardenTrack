@@ -606,3 +606,48 @@ zone, ecoregion, frost profile — stay in [CLIMATE.md](./CLIMATE.md), because t
 describe a region of millions of people and the native-plant and scheduling work
 cannot proceed without them.
 **Status:** ✅ Accepted
+
+---
+
+### D-028 · Location minimisation, for every user — no precise position, ever
+**Chose:** GardenTrack stores a **`GeoCell`** — coordinates rounded to a shared
+grid, 0.1° by default — plus region codes. No address, no postcode, no raw
+device fix, no un-rounded pin, and no EXIF GPS in photographs. This is a product
+commitment for all users, not repository hygiene for this one (D-027 was the
+narrower version).
+**Why it's affordable:** the intuition is that a garden app needs to know where
+your garden is, and it turns out not to. Only one feature needs coordinates at
+all — solar position for shadow casting — and it barely needs them. 0.1° of
+latitude is ~11 km and solar altitude error tracks latitude roughly 1:1, so
+±0.1°. 0.1° of longitude is ~8.6 km at 40° N and solar time moves ~4 minutes per
+*whole* degree, so ~24 seconds. Net effect on computed direct-sun hours is **a
+minute or two a day near the solstices**, against a decision a gardener rounds to
+"about six hours" anyway. Zone, frost profile, nativity and weather are all
+regional lookups that never wanted a point.
+
+**The precision costs nothing, so there is no reason to hold it.** That is the
+whole argument — this is not a privacy/utility trade, it is data we were going to
+store out of habit.
+
+**Rounded, not jittered.** Random offset feels private and isn't: repeated
+observations average back toward the true point, and it makes results
+irreproducible. Rounding puts every garden in a cell on one value, which is the
+property that actually helps.
+**Made structural, not procedural.** The lesson from D-018 — a rule in prose gets
+broken by the first component built against it — applies directly. So: the domain
+type has **no field** for a precise coordinate; `coarsen()` is the only
+constructor and it rounds; a test asserts no serialised `Site` retains more
+precision than `precisionDeg`; and outbound requests carry the cell, giving one
+place to audit.
+**Costs:** setup can't offer address entry, so it offers manual zone/frost entry,
+a map pin rounded on drop, or device location rounded in memory — and no geocoding
+round-trip, since sending an address to a service to be resolved discloses the
+address to that service. Weather at ~10 km may miss a genuine microclimate;
+acceptable, and the user can override the frost profile by hand.
+**Stated limits.** It protects against leaked history, shared exports, stolen sync
+databases, over-forwarded share links and future contributors who didn't know the
+rule. It does **not** protect against someone holding the device, IP geolocation
+by any server the app talks to, the identifying content of photographs, or a user
+typing their address into a note field. Claiming more would be worse than claiming
+nothing — see PRIVACY.md §7.
+**Status:** ✅ Accepted

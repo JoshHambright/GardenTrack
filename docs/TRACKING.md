@@ -3,7 +3,7 @@
 **This is the live source of truth for build progress.** Update it in the same
 commit as the work it describes.
 
-Last updated: 2026-09-11
+Last updated: 2026-09-12
 
 ---
 
@@ -89,6 +89,8 @@ visible size and owned by the component library, not remembered per screen
 | P0-04 | CI on every push; `verify` green before anything else lands | ⬜ |
 | P0-05 | `packages/core` — pure domain, zero I/O. Geometry and dates live here | ⬜ |
 | P0-06 | IndexedDB layer with the D-008 discipline: UUIDv7 ids, `updatedAt`, soft delete | ⬜ |
+| P0-06b | **`GeoCell` + `coarsen()` as the only way to hold a position** (D-028) | ⬜ |
+| P0-06c | **Test: no serialised `Site` retains precision beyond `precisionDeg`** | ⬜ |
 | P0-07 | PWA shell — manifest, service worker, installs to a home screen | ⬜ |
 | P0-08 | **Storage measurement.** Write N downscaled photos, observe quota and `navigator.storage.persist()`, write down the per-photo budget | ⬜ |
 | P0-09 | Three device shells from D-018 — phone stack, tablet two-pane, desktop three-pane | ⬜ |
@@ -107,6 +109,8 @@ measurement, not a guess.
 | ID | Task | Status |
 |---|---|:---:|
 | P1-01 | `Site` with the four geographic facts kept separate (DATA_MODEL §2) | ⬜ |
+| P1-01b | Setup without disclosure — manual zone/frost, pin rounded on drop, device fix rounded in memory. **No geocoding round-trip** (D-028) | ⬜ |
+| P1-01c | UI shows zone + ecoregion + frost, never a place name (PRIVACY §8) | ⬜ |
 | P1-02 | Core geometry: area, bbox, point-in-polygon, centroid, rotation | ⬜ |
 | P1-03 | **Polygon clipper and per-cell `coverage`** (D-019) — the load-bearing one | ⬜ |
 | P1-04 | Spline sampling for curved rings, and RDP simplification | ⬜ |
@@ -144,10 +148,10 @@ Scope lines only until each is next. Full descriptions and exit criteria are in
 | 2 | **P2-00 first:** replace the provisional frost profile with NOAA/MRCC station probabilities. Then bundled catalog, USDA PLANTS nativity, zone filtering, seed and bulb inventory with computed viability |
 | 3 | Placement in three footprint modes, derived schedule both directions, perennial occupancy, companion evaluation, painted light |
 | 4 | Solar position, shadow casting from obstructions, the site light lattice, morning and afternoon kept apart |
-| 5 | Lifecycle events, one-tap harvest logging, photos, the ready-now queue, JSON export |
+| 5 | Lifecycle events, one-tap harvest logging, photos (**EXIF stripped on import**, D-028), the ready-now queue, JSON export |
 | 6 | One-off, recurring and derived tasks; today/this week; notification config |
 | 7 | Seed-starting calendar, trays and cells, succession, the vendor sourcing proxy |
 | 8 | Per-bed history, yields, variety verdicts, rotation heatmap, bed photo time-lapse |
-| 9 | Printable plans, QR bed stakes, read-only share links |
+| 9 | Printable plans, QR bed stakes (**resolve locally** — a code in a front garden shouldn't point at a public page), read-only share links with photos as a separate opt-in |
 | 10 | Weather and GDD, weather-conditional tasks, pests and treatments, variety trials |
 | 11 | Accounts, field-level last-write-wins sync, partner access |

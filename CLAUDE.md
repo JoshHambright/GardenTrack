@@ -62,6 +62,7 @@ appliance) that shares these documentation conventions. Nothing else.
 | `docs/DATA_MODEL.md` | The domain model. **Read before ROADMAP.md** |
 | `docs/ROADMAP.md` | 12 phases, each with an exit criterion |
 | `docs/CLIMATE.md` | Target climate — zone, ecoregion, frost profile. Names no place |
+| `docs/PRIVACY.md` | Location minimisation — what's stored, why it's affordable, threat model |
 | `docs/DECISIONS.md` | ADR log. Read before changing an approach |
 | `docs/TRACKING.md` | Live tracker — update in the same commit as the work |
 | `spikes/` | Working prototypes. Each has a README on what it proved |
@@ -124,17 +125,30 @@ Do not rediscover or re-argue these. Full reasoning is in `docs/DECISIONS.md`.
 
 ## Privacy
 
-**The garden's location never enters source control.** No address, town,
-postcode or coordinates, and no photographs of the property — git history is
-effectively permanent, and an address plus a plant inventory is more than either
-alone (D-027).
+**GardenTrack never stores a precise location — for any user.** Not an address,
+postcode, raw device fix, un-rounded map pin, or EXIF GPS. It stores a `GeoCell`
+(coordinates rounded to a 0.1° grid) plus region codes, because that is all any
+feature actually needs (D-028, [PRIVACY.md](docs/PRIVACY.md)).
+
+This is **structural, not a rule to remember** — the same lesson as D-018:
+
+1. The domain type has **no field** for a precise coordinate.
+2. `coarsen(lat, lon, precisionDeg)` is the only constructor, and it rounds.
+   Raw coordinates are locals for one call and are never returned.
+3. A test asserts no serialised `Site` retains more precision than
+   `precisionDeg`.
+4. Outbound requests carry the cell, never a finer position — one place to audit.
+5. **EXIF is stripped before a photo blob is written.** Easiest to forget, most
+   complete to lose.
+6. **No geocoding round-trip.** Resolving an address discloses the address.
+
+And in this repository specifically:
 
 - Real site data → `site.local.json`, gitignored. `site.local.example.json`
   documents the shape.
-- Photographs → the app's local storage only. Never copied into the repo, never
-  into a commit message, never into an artifact.
-- Publishable climate parameters — zone, ecoregion, frost profile — live in
-  `docs/CLIMATE.md` and name no place.
+- Photographs of the property → never committed, never in a commit message,
+  never in an artifact.
+- Publishable climate parameters live in `docs/CLIMATE.md` and name no place.
 
 ## Secrets
 
