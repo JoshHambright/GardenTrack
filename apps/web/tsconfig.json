@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist-types",
+    "rootDir": ".",
+    "types": ["svelte", "vite/client"],
+    "allowJs": true,
+    "noEmit": false
+  },
+  "include": ["src/**/*.ts", "src/**/*.svelte", "vite.config.ts"],
+  "references": [{ "path": "../../packages/core" }, { "path": "../../packages/store" }]
+}

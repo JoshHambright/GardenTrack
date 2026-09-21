@@ -1,0 +1,22 @@
+{
+  "name": "@gardentrack/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "dependencies": {
+    "@gardentrack/core": "workspace:*",
+    "@gardentrack/store": "workspace:*"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "svelte": "^5.16.0",
+    "svelte-check": "^4.1.1",
+    "vite": "^6.0.7"
+  }
+}

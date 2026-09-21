@@ -1,0 +1,13 @@
+{
+  "name": "GardenTrack",
+  "short_name": "Garden",
+  "description": "Plan, track and remember a home garden. Works offline.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f1f3ee",
+  "theme_color": "#0e6e72",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

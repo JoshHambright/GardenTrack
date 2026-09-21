@@ -14,7 +14,9 @@ photos/
 # Build + tooling
 node_modules/
 dist/
+dist-types/
 build/
+*.tsbuildinfo
 coverage/
 .vite/
 *.tsbuildinfo
