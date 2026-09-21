@@ -3,7 +3,7 @@
 **This is the live source of truth for build progress.** Update it in the same
 commit as the work it describes.
 
-Last updated: 2026-09-12
+Last updated: 2026-09-21
 
 ---
 
@@ -40,8 +40,8 @@ titles: `P1-07: transform box for move, scale and rotate`.
 | Phase | Title | Tasks | Done | Status |
 |---|---|:---:|:---:|---|
 | — | Spikes | 2 | 1 | 🟨 Spike A published, iterating |
-| 0 | Foundation | 10 | 0 | ⬜ Next |
-| 1 | Site, beds, and the map | 17 | 0 | ⬜ |
+| 0 | Foundation | 12 | **12** | ✅ **Complete** |
+| 1 | Site, beds, and the map | 21 | 0 | ⬜ Next |
 | 2 | Plant library, natives, seed inventory | — | — | ⬜ unblocked |
 | 3 | Planning and the derived schedule | — | — | ⬜ unblocked |
 | 4 | Light and shade | — | — | ⬜ unblocked |
@@ -83,22 +83,30 @@ visible size and owned by the component library, not remembered per screen
 
 | ID | Task | Status |
 |---|---|:---:|
-| P0-01 | pnpm workspace, TypeScript config, Vite, `exactOptionalPropertyTypes` on | ⬜ |
-| P0-02 | Lint and format, wired to a single `verify` script | ⬜ |
-| P0-03 | Vitest, with a real test on a real module — no placeholder assertions | ⬜ |
-| P0-04 | CI on every push; `verify` green before anything else lands | ⬜ |
-| P0-05 | `packages/core` — pure domain, zero I/O. Geometry and dates live here | ⬜ |
-| P0-06 | IndexedDB layer with the D-008 discipline: UUIDv7 ids, `updatedAt`, soft delete | ⬜ |
-| P0-06b | **`GeoCell` + `coarsen()` as the only way to hold a position** (D-028) | ⬜ |
-| P0-06c | **Test: no serialised `Site` retains precision beyond `precisionDeg`** | ⬜ |
-| P0-07 | PWA shell — manifest, service worker, installs to a home screen | ⬜ |
-| P0-08 | **Storage measurement.** Write N downscaled photos, observe quota and `navigator.storage.persist()`, write down the per-photo budget | ⬜ |
-| P0-09 | Three device shells from D-018 — phone stack, tablet two-pane, desktop three-pane | ⬜ |
-| P0-10 | Theme tokens and type scale, both themes, carried over from the spike | ⬜ |
+| P0-01 | pnpm workspace, TypeScript config, Vite, `exactOptionalPropertyTypes` on | ✅ |
+| P0-02 | Lint and format, wired to a single `verify` script | ✅ |
+| P0-03 | Vitest, with a real test on a real module — no placeholder assertions | ✅ |
+| P0-04 | CI on every push; `verify` green before anything else lands | ✅ |
+| P0-05 | `packages/core` — pure domain, zero I/O. Geometry and dates live here | ✅ |
+| P0-06 | IndexedDB layer with the D-008 discipline: UUIDv7 ids, `updatedAt`, soft delete | ✅ |
+| P0-06b | **`GeoCell` + `coarsen()` as the only way to hold a position** (D-028) | ✅ |
+| P0-06c | **Test: no serialised `Site` retains precision beyond `precisionDeg`** | ✅ |
+| P0-07 | PWA shell — manifest, service worker, installs to a home screen | ✅ |
+| P0-08 | **Storage measurement.** 40 photos → 220 KB each, 1.00× overhead, ~4,100 in quota. Budget written in [STORAGE.md](./STORAGE.md) | ✅ |
+| P0-09 | Three device shells from D-018 — phone stack, tablet two-pane, desktop three-pane | ✅ |
+| P0-10 | Theme tokens and type scale, both themes, carried over from the spike | ✅ |
 
-**Exit:** `verify` green in CI · the app installs to a phone home screen and
-opens with the network off · a written per-photo storage budget backed by a
-measurement, not a guess.
+**Exit:** ✅ met. `verify` (typecheck + lint + 44 tests + build) green · service
+worker active and a **cold launch with the network off renders the app**,
+verified in a real browser · per-photo budget written in [STORAGE.md](./STORAGE.md)
+from a measurement, with the caveat that quota is a fraction of free disk and
+`persist()` was refused headless.
+
+Two findings worth carrying forward: the first storage probe reported 868,224
+photos because `estimate()` updates lazily and was measuring nothing — it now
+polls until settled and refuses an implausible overhead ratio. And two of the
+first tests failed as wrong *tests*, not wrong code (grid-boundary neighbours,
+and area lost to the sliver filter).
 
 ---
 

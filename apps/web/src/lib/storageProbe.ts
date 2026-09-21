@@ -86,16 +86,25 @@ export async function runStorageProbe(
   await db.putMany('photos', photos);
   const writeMs = performance.now() - startedAt;
 
-  const after = await estimate();
+  // navigator.storage.estimate() is updated lazily — reading it straight after a
+  // write reports the old figure, which silently turns the whole measurement
+  // into a fiction. Wait for it to settle instead of trusting the first read.
+  const after = await settledEstimate(before.usage);
   db.close();
 
   const meanPhotoBytes = photos.reduce((sum, p) => sum + p.bytes, 0) / Math.max(photos.length, 1);
   const storedDelta =
     before.usage !== null && after.usage !== null ? after.usage - before.usage : null;
   const rawTotal = meanPhotoBytes * photos.length;
-  const overheadRatio = storedDelta !== null && rawTotal > 0 ? storedDelta / rawTotal : null;
+  const rawRatio = storedDelta !== null && rawTotal > 0 ? storedDelta / rawTotal : null;
 
-  const perPhotoStored = overheadRatio === null ? meanPhotoBytes : meanPhotoBytes * overheadRatio;
+  // A ratio outside this band means the estimate never caught up, not that the
+  // browser found a way to store a JPEG for free. Report it as unmeasured
+  // rather than deriving a capacity figure from a number we don't believe.
+  const overheadRatio = rawRatio !== null && rawRatio >= 0.5 && rawRatio <= 5 ? rawRatio : null;
+
+  // Fall back to the bytes we actually wrote, which we know exactly.
+  const perPhotoStored = meanPhotoBytes * (overheadRatio ?? 1);
   const estimatedPhotoCapacity =
     after.quota !== null && perPhotoStored > 0 ? Math.floor(after.quota / perPhotoStored) : null;
 
@@ -110,6 +119,24 @@ export async function runStorageProbe(
     estimatedPhotoCapacity,
     writeMsPerPhoto: writeMs / Math.max(photos.length, 1),
   };
+}
+
+/** Poll until the usage figure moves and holds steady, or give up honestly. */
+async function settledEstimate(
+  baseline: number | null,
+  timeoutMs = 8_000,
+): Promise<{ usage: number | null; quota: number | null }> {
+  const deadline = Date.now() + timeoutMs;
+  let previous = await estimate();
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const current = await estimate();
+    const moved = baseline === null || current.usage === null || current.usage > baseline;
+    const steady = previous.usage !== null && current.usage === previous.usage;
+    if (moved && steady) return current;
+    previous = current;
+  }
+  return previous;
 }
 
 async function estimate(): Promise<{ usage: number | null; quota: number | null }> {

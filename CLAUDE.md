@@ -63,6 +63,7 @@ appliance) that shares these documentation conventions. Nothing else.
 | `docs/ROADMAP.md` | 12 phases, each with an exit criterion |
 | `docs/CLIMATE.md` | Target climate — zone, ecoregion, frost profile. Names no place |
 | `docs/PRIVACY.md` | Location minimisation — what's stored, why it's affordable, threat model |
+| `docs/STORAGE.md` | Measured photo budget and quota caveats (P0-08) |
 | `docs/DECISIONS.md` | ADR log. Read before changing an approach |
 | `docs/TRACKING.md` | Live tracker — update in the same commit as the work |
 | `spikes/` | Working prototypes. Each has a README on what it proved |
@@ -81,6 +82,17 @@ hardware. Applies especially to the bed editor and the photo tracing.
 
 Note: this session cannot receive comments left on artifact pages — feedback
 comes back through chat.
+
+## Running it
+
+```bash
+pnpm install
+pnpm verify     # typecheck + lint + test + build — the CI gate
+pnpm dev        # vite dev server
+pnpm test       # vitest
+```
+
+`verify` is one command on purpose: there is no "which checks do I run" question.
 
 ## Conventions
 

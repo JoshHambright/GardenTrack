@@ -109,7 +109,11 @@
           <dt>Used after</dt><dd>{mb(probe.usageAfter)}</dd>
           <dt>Mean photo</dt><dd>{(probe.meanPhotoBytes / 1024).toFixed(0)} KB</dd>
           <dt>Storage overhead</dt>
-          <dd>{probe.overheadRatio === null ? '—' : `${probe.overheadRatio.toFixed(2)}×`}</dd>
+          <dd>
+            {probe.overheadRatio === null
+              ? 'not measurable'
+              : `${probe.overheadRatio.toFixed(2)}×`}
+          </dd>
           <dt>Photos that fit</dt>
           <dd>{probe.estimatedPhotoCapacity?.toLocaleString() ?? '—'}</dd>
           <dt>Write time</dt><dd>{probe.writeMsPerPhoto.toFixed(1)} ms each</dd>
