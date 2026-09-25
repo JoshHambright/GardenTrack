@@ -651,3 +651,24 @@ by any server the app talks to, the identifying content of photographs, or a use
 typing their address into a note field. Claiming more would be worse than claiming
 nothing — see PRIVACY.md §7.
 **Status:** ✅ Accepted
+
+---
+
+### D-029 · Snapshot at the UI boundary; the store stays framework-agnostic
+**Chose:** Everything crossing from the UI into `@gardentrack/store` goes through
+`$state.snapshot()` first. The store depends on no framework, and rejects
+non-plain data with a `NotStorableError` that names the real cause.
+**Why:** Svelte 5 reactive state is a `Proxy`, and a `Proxy` cannot be
+structured-cloned, so handing a reactive object to IndexedDB throws
+`DataCloneError: #<Object> could not be cloned` — which names nothing useful and
+does not say where to fix it. It was found the only way it could be: the bed
+resized on screen, looked saved, and silently was not.
+
+The alternative — plainifying inside the store — would mean either
+`structuredClone` (which fails on the same proxies) or a JSON round-trip (which
+destroys the `Blob`s that photos are made of, and photos are 95% of what gets
+stored). Neither is acceptable, so the boundary is the right place and the store's
+job is to fail loudly rather than to guess.
+**Costs:** a `$state.snapshot()` at each call site, and a rule to remember. The
+typed error is what keeps it from being remembered the hard way twice.
+**Status:** ✅ Accepted

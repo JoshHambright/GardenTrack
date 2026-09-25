@@ -43,6 +43,28 @@ export function openDatabase(factory: IDBFactory = indexedDB): Promise<IDBDataba
   });
 }
 
+export class NotStorableError extends Error {}
+
+/**
+ * IndexedDB's DataCloneError names nothing useful. In practice it means a
+ * framework's reactive proxy reached the store — Svelte 5 state, a Vue ref, a
+ * MobX observable — so say that, because the fix is always at the call site.
+ */
+function asStorableError(error: unknown, store: StoreName): Error {
+  const isCloneFailure =
+    error instanceof DOMException
+      ? error.name === 'DataCloneError'
+      : error instanceof Error && /could not be cloned/i.test(error.message);
+  if (!isCloneFailure) {
+    return error instanceof Error ? error : new Error(String(error));
+  }
+  return new NotStorableError(
+    `Cannot store a record in "${store}": it is not plain data. This is almost ` +
+      `always a reactive proxy reaching the store — snapshot it at the UI boundary ` +
+      `before saving.`,
+  );
+}
+
 export class Database {
   constructor(private readonly db: IDBDatabase) {}
 
@@ -52,14 +74,22 @@ export class Database {
 
   async put<T extends BaseRecord>(store: StoreName, record: T): Promise<T> {
     const tx = this.db.transaction(store, 'readwrite');
-    await promisify(tx.objectStore(store).put(record));
+    try {
+      await promisify(tx.objectStore(store).put(record));
+    } catch (error) {
+      throw asStorableError(error, store);
+    }
     return record;
   }
 
   async putMany<T extends BaseRecord>(store: StoreName, records: readonly T[]): Promise<void> {
     const tx = this.db.transaction(store, 'readwrite');
     const objectStore = tx.objectStore(store);
-    await Promise.all(records.map((record) => promisify(objectStore.put(record))));
+    try {
+      await Promise.all(records.map((record) => promisify(objectStore.put(record))));
+    } catch (error) {
+      throw asStorableError(error, store);
+    }
   }
 
   /** Returns undefined for a tombstoned row — callers never see deleted data. */

@@ -14,6 +14,12 @@ import { samplePolygon } from './spline.js';
 
 export type ScaleHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
+/** Eight targets round a small bed overlap on a thumb; fall back to corners. */
+export const scaleHandles = {
+  corners: ['nw', 'ne', 'se', 'sw'] as const,
+  all: ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const,
+};
+
 export const move = (points: Polygon, dx: number, dy: number): Vec[] =>
   points.map((p) => ({ x: p.x + dx, y: p.y + dy }));
 

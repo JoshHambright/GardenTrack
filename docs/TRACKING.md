@@ -3,7 +3,7 @@
 **This is the live source of truth for build progress.** Update it in the same
 commit as the work it describes.
 
-Last updated: 2026-09-21
+Last updated: 2026-09-25
 
 ---
 
@@ -41,7 +41,7 @@ titles: `P1-07: transform box for move, scale and rotate`.
 |---|---|:---:|:---:|---|
 | — | Spikes | 2 | 1 | 🟨 Spike A published, iterating |
 | 0 | Foundation | 12 | **12** | ✅ **Complete** |
-| 1 | Site, beds, and the map | 21 | 0 | ⬜ Next |
+| 1 | Site, beds, and the map | 21 | **17** | 🟨 In progress |
 | 2 | Plant library, natives, seed inventory | — | — | ⬜ unblocked |
 | 3 | Planning and the derived schedule | — | — | ⬜ unblocked |
 | 4 | Light and shade | — | — | ⬜ unblocked |
@@ -116,28 +116,28 @@ and area lost to the sliver filter).
 
 | ID | Task | Status |
 |---|---|:---:|
-| P1-01 | `Site` with the four geographic facts kept separate (DATA_MODEL §2) | ⬜ |
-| P1-01b | Setup without disclosure — manual zone/frost, pin rounded on drop, device fix rounded in memory. **No geocoding round-trip** (D-028) | ⬜ |
-| P1-01c | UI shows zone + ecoregion + frost, never a place name (PRIVACY §8) | ⬜ |
-| P1-02 | Core geometry: area, bbox, point-in-polygon, centroid, rotation | ⬜ |
-| P1-03 | **Polygon clipper and per-cell `coverage`** (D-019) — the load-bearing one | ⬜ |
-| P1-04 | Spline sampling for curved rings, and RDP simplification | ⬜ |
-| P1-05 | Bed create / edit / **archive, never delete** | ⬜ |
-| P1-06 | Map view — pan, zoom, pinch, tap to select | ⬜ |
-| P1-07 | Transform box: move, scale from a corner, rotate (D-026) | ⬜ |
-| P1-08 | Reshape mode: vertex handles with offset drag | ⬜ |
-| P1-09 | Snap to grid and to angle, applied angle-first (D-024) | ⬜ |
-| P1-10 | Editable edge lengths and overall size, with the rectangle rule set | ⬜ |
-| P1-11 | Bed templates — 4×8, 4×4, 2×8, L, keyhole | ⬜ |
-| P1-12 | Holes, subtracted from coverage | ⬜ |
-| P1-13 | Obstructions as rings with a height (D-023), ready for Phase 4 | ⬜ |
-| P1-14 | **Handle primitive** — one component owning visible size vs hit target (D-018) | ⬜ |
-| P1-15 | Grid rotation independent of the bed's angle | ⬜ |
-| P1-16 | Units: metric stored, imperial displayed, switchable (D-009) | ⬜ |
+| P1-01 | `Site` with the four geographic facts kept separate (DATA_MODEL §2) | ✅ |
+| P1-01b | Setup without disclosure — manual zone/frost, pin rounded on drop, device fix rounded in memory. **No geocoding round-trip** (D-028) | ✅ |
+| P1-01c | UI shows zone + ecoregion + frost, never a place name (PRIVACY §8) | ✅ |
+| P1-02 | Core geometry: area, bbox, point-in-polygon, centroid, rotation | ✅ |
+| P1-03 | **Polygon clipper and per-cell `coverage`** (D-019) — the load-bearing one | ✅ |
+| P1-04 | Spline sampling for curved rings, and RDP simplification | ✅ |
+| P1-05 | Bed create / edit / **archive, never delete** | ✅ |
+| P1-06 | Map view — pan, zoom, pinch, tap to select | ✅ |
+| P1-07 | Transform box: move, scale from a corner, rotate (D-026) | ✅ |
+| P1-08 | Reshape mode: vertex handles with offset drag | ✅ |
+| P1-09 | Snap to grid and to angle, applied angle-first (D-024) | ✅ |
+| P1-10 | Editable edge lengths and overall size, with the rectangle rule set — model + tests done; no edge-length chips in the UI yet | 🟨 |
+| P1-11 | Bed templates — 4×8, 4×4, 2×8, L, keyhole | ✅ |
+| P1-12 | Holes, subtracted from coverage — model, clipping and rendering done; no drawing tool yet | 🟨 |
+| P1-13 | Obstructions as rings with a height (D-023), ready for Phase 4 — model and rendering done; no creation UI yet | 🟨 |
+| P1-14 | **Handle primitive** — one component owning visible size vs hit target (D-018) | ✅ |
+| P1-15 | Grid rotation independent of the bed's angle | ✅ |
+| P1-16 | Units: metric stored, imperial displayed, switchable (D-009) | ✅ |
 | P1-17 | Warn before a resize strands planted cells (D-026) | ⬜ |
-| P1-18 | **Rounded-corner bed template and detection** — the real beds are corrugated metal with radiused corners, which `rectInfo` does not recognise | ⬜ |
-| P1-19 | Obstruction presence window (`presentFrom`/`presentTo`) — covers shade cloth as well as deciduous canopy (D-023) | ⬜ |
-| P1-20 | Containers as first-class beds — there are more grow bags here than beds | ⬜ |
+| P1-18 | **Rounded-corner bed template and detection** — the real beds are corrugated metal with radiused corners, which `rectInfo` does not recognise | ✅ |
+| P1-19 | Obstruction presence window (`presentFrom`/`presentTo`) — covers shade cloth as well as deciduous canopy (D-023) | ✅ |
+| P1-20 | Containers as first-class beds — there are more grow bags here than beds — `container` kind exists; no dedicated affordance yet | 🟨 |
 | P1-21 | Paths / circulation space — beds here sit in gravel and mulch, not adjacent to each other | ⬜ |
 
 **Exit:** Josh's real garden entered — including at least one bed that isn't a

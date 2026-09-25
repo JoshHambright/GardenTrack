@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { isUuidv7 } from '@gardentrack/core';
-import { Database, createRecord, merge, softDelete, touch, type BaseRecord } from '../src/index.js';
+import { Database, createRecord, merge, softDelete, touch, NotStorableError, type BaseRecord } from '../src/index.js';
 
 interface Bed extends BaseRecord {
   name: string;
@@ -63,5 +63,16 @@ describe('Database', () => {
     await db.putMany<Bed>('beds', [makeBed('old', 1_000), makeBed('new', 3_000)]);
     const changes = await db.changedSince<Bed>('beds', 2_000);
     expect(changes.map((b) => b.name)).toEqual(['new']);
+  });
+});
+
+describe('NotStorableError', () => {
+  it('explains a reactive proxy rather than repeating IndexedDB’s DataCloneError', async () => {
+    // A Proxy is exactly what Svelte 5 state is, and it cannot be cloned.
+    const bed = makeBed('Proxied');
+    const proxied = new Proxy(bed, {
+      get: (target, key) => Reflect.get(target, key) as unknown,
+    });
+    await expect(db.put('beds', proxied as typeof bed)).rejects.toBeInstanceOf(NotStorableError);
   });
 });
