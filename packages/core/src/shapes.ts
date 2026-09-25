@@ -12,13 +12,61 @@ import { feet } from './units.js';
  * radiused corners, which a sharp-corner test does not recognise.
  */
 
-export type TemplateId = 'rect4x8' | 'rect4x4' | 'rect2x8' | 'vego8x4' | 'lShape' | 'keyhole';
+export type TemplateId =
+  | 'rect4x8'
+  | 'rect4x4'
+  | 'rect2x8'
+  | 'vego8x4'
+  | 'lShape'
+  | 'keyhole'
+  | 'bag5'
+  | 'bag10'
+  | 'bag15'
+  | 'bag20';
+
+export type TemplateGroup = 'bed' | 'container';
 
 export interface Template {
   readonly id: TemplateId;
   readonly label: string;
   readonly note: string;
+  readonly group: TemplateGroup;
   build(origin: Vec): Ring;
+}
+
+/** A circle, for a grow bag or a pot. */
+export function circlePoints(centre: Vec, radiusMm: number, steps = 16): Vec[] {
+  const points: Vec[] = [];
+  for (let i = 0; i < steps; i += 1) {
+    const a = (i / steps) * Math.PI * 2;
+    points.push({ x: centre.x + Math.cos(a) * radiusMm, y: centre.y + Math.sin(a) * radiusMm });
+  }
+  return points;
+}
+
+/**
+ * Fabric grow bag diameters, which are what the footprint actually is. Nominal
+ * gallons describe volume, not width, and the two are only loosely related.
+ */
+const BAG_DIAMETER_INCHES: Readonly<Record<'bag5' | 'bag10' | 'bag15' | 'bag20', number>> = {
+  bag5: 12,
+  bag10: 16,
+  bag15: 18,
+  bag20: 20,
+};
+
+function bagTemplate(id: 'bag5' | 'bag10' | 'bag15' | 'bag20', gallons: number): Template {
+  const diameter = BAG_DIAMETER_INCHES[id] * 25.4;
+  return {
+    id,
+    label: `${gallons} gal bag`,
+    note: `${BAG_DIAMETER_INCHES[id]}″ across.`,
+    group: 'container',
+    build: (o) => ({
+      points: circlePoints({ x: o.x + diameter / 2, y: o.y + diameter / 2 }, diameter / 2),
+      curved: false,
+    }),
+  };
 }
 
 const rectPoints = (o: Vec, w: number, h: number): Vec[] => [
@@ -74,30 +122,35 @@ function atOrigin(build: (origin: Vec) => Ring): (origin: Vec) => Ring {
 const rawTemplates: readonly Template[] = [
   {
     id: 'rect4x8',
+    group: 'bed',
     label: "4′ × 8′",
     note: 'The default raised bed.',
     build: (o) => ({ points: rectPoints(o, feet(4), feet(8)), curved: false }),
   },
   {
     id: 'rect4x4',
+    group: 'bed',
     label: "4′ × 4′",
     note: 'Square-foot gardening classic.',
     build: (o) => ({ points: rectPoints(o, feet(4), feet(4)), curved: false }),
   },
   {
     id: 'rect2x8',
+    group: 'bed',
     label: "2′ × 8′",
     note: 'A narrow strip along a fence or wall.',
     build: (o) => ({ points: rectPoints(o, feet(2), feet(8)), curved: false }),
   },
   {
     id: 'vego8x4',
+    group: 'bed',
     label: "8′ × 4′ rounded",
     note: 'Corrugated metal bed with radiused corners.',
     build: (o) => ({ points: roundedRectPoints(o, feet(8), feet(4), feet(0.75)), curved: false }),
   },
   {
     id: 'lShape',
+    group: 'bed',
     label: 'L-shape',
     note: 'Around a corner.',
     build: (o) => ({
@@ -114,6 +167,7 @@ const rawTemplates: readonly Template[] = [
   },
   {
     id: 'keyhole',
+    group: 'bed',
     label: 'Keyhole',
     note: 'Round bed with an access notch.',
     build: (o) => {
@@ -131,7 +185,15 @@ const rawTemplates: readonly Template[] = [
   },
 ];
 
-export const TEMPLATES: readonly Template[] = rawTemplates.map((t) => ({
+const allTemplates: readonly Template[] = [
+  ...rawTemplates,
+  bagTemplate('bag5', 5),
+  bagTemplate('bag10', 10),
+  bagTemplate('bag15', 15),
+  bagTemplate('bag20', 20),
+];
+
+export const TEMPLATES: readonly Template[] = allTemplates.map((t) => ({
   ...t,
   build: atOrigin(t.build),
 }));

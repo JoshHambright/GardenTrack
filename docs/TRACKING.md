@@ -41,8 +41,8 @@ titles: `P1-07: transform box for move, scale and rotate`.
 |---|---|:---:|:---:|---|
 | — | Spikes | 2 | 1 | 🟨 Spike A published, iterating |
 | 0 | Foundation | 12 | **12** | ✅ **Complete** |
-| 1 | Site, beds, and the map | 21 | **17** | 🟨 In progress |
-| 2 | Plant library, natives, seed inventory | — | — | ⬜ unblocked |
+| 1 | Site, beds, and the map | 21 | **20** | ✅ **Complete** (1 deferred) |
+| 2 | Plant library, natives, seed inventory | — | — | ⬜ Next |
 | 3 | Planning and the derived schedule | — | — | ⬜ unblocked |
 | 4 | Light and shade | — | — | ⬜ unblocked |
 | 5 | The in-season log | — | — | ⬜ |
@@ -127,22 +127,29 @@ and area lost to the sliver filter).
 | P1-07 | Transform box: move, scale from a corner, rotate (D-026) | ✅ |
 | P1-08 | Reshape mode: vertex handles with offset drag | ✅ |
 | P1-09 | Snap to grid and to angle, applied angle-first (D-024) | ✅ |
-| P1-10 | Editable edge lengths and overall size, with the rectangle rule set — model + tests done; no edge-length chips in the UI yet | 🟨 |
+| P1-10 | Editable edge lengths and overall size, with the rectangle rule set| ✅ |
 | P1-11 | Bed templates — 4×8, 4×4, 2×8, L, keyhole | ✅ |
-| P1-12 | Holes, subtracted from coverage — model, clipping and rendering done; no drawing tool yet | 🟨 |
-| P1-13 | Obstructions as rings with a height (D-023), ready for Phase 4 — model and rendering done; no creation UI yet | 🟨 |
+| P1-12 | Holes, subtracted from coverage| ✅ |
+| P1-13 | Obstructions as rings with a height (D-023), ready for Phase 4| ✅ |
 | P1-14 | **Handle primitive** — one component owning visible size vs hit target (D-018) | ✅ |
 | P1-15 | Grid rotation independent of the bed's angle | ✅ |
 | P1-16 | Units: metric stored, imperial displayed, switchable (D-009) | ✅ |
-| P1-17 | Warn before a resize strands planted cells (D-026) | ⬜ |
+| P1-17 | Warn before a resize strands planted cells (D-026) — deferred to Phase 3: there are no plantings yet, so there is nothing to warn about | ❌ |
 | P1-18 | **Rounded-corner bed template and detection** — the real beds are corrugated metal with radiused corners, which `rectInfo` does not recognise | ✅ |
 | P1-19 | Obstruction presence window (`presentFrom`/`presentTo`) — covers shade cloth as well as deciduous canopy (D-023) | ✅ |
-| P1-20 | Containers as first-class beds — there are more grow bags here than beds — `container` kind exists; no dedicated affordance yet | 🟨 |
-| P1-21 | Paths / circulation space — beds here sit in gravel and mulch, not adjacent to each other | ⬜ |
+| P1-20 | Containers as first-class beds| ✅ |
+| P1-21 | Paths / circulation space — beds here sit in gravel and mulch, not adjacent to each other | ✅ |
 
-**Exit:** Josh's real garden entered — including at least one bed that isn't a
-rectangle — recognisable on a phone held outdoors in sunlight, with dimensions
-accurate enough that Phase 3's spacing maths can be trusted.
+**Exit:** 🟨 the app is ready for it; the garden itself is not yet entered. A
+seed layout traced from photographs gets Josh most of the way — 11 beds including
+6 grow bags, 5 shadow casters and 3 surfaces — with **every shape flagged
+`estimated`** until a tape measure says otherwise (D-024). Verified in a real
+browser: seeding, drawing surfaces, cutting holes, setting an exact dimension,
+editing an obstruction's height and presence window, and all of it surviving a
+reload.
+
+Still Josh's to do: drag the seeded shapes to where they really are, measure the
+beds, and flip each one to *Measured*.
 
 ---
 

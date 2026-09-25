@@ -66,6 +66,29 @@ export interface Bed {
   /** Independent of the bed's own angle — rows face the sun, not the edge. */
   gridRotationDeg: number;
   soilNotes: string;
+  /**
+   * False until someone has put a tape measure on it. Sketched and seeded beds
+   * start false: this is a measurement tool, and a number nobody checked should
+   * say so rather than quietly feeding the spacing maths (D-024).
+   */
+  dimensionsVerified: boolean;
+  archivedAt: number | null;
+}
+
+/**
+ * Gravel, mulch, pavers. **Cosmetic only** — a surface has no coverage, grows
+ * nothing and casts no shade. It exists so the plan is recognisable as the
+ * garden, because beds that sit in circulation space rather than next to each
+ * other are hard to place from memory (D-030).
+ */
+export type SurfaceKind = 'gravel' | 'mulch' | 'stone' | 'paver' | 'grass' | 'deck';
+
+export interface Surface {
+  readonly id: string;
+  siteId: string;
+  name: string;
+  kind: SurfaceKind;
+  outline: Ring;
   archivedAt: number | null;
 }
 

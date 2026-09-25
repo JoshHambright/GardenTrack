@@ -2,13 +2,14 @@ import type { BaseRecord } from './record.js';
 import { isLive } from './record.js';
 
 export const DB_NAME = 'gardentrack';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 /** Every collection the app persists. Adding one is a version bump. */
 export const STORES = [
   'sites',
   'beds',
   'obstructions',
+  'surfaces',
   'varieties',
   'seedPackets',
   'plantings',

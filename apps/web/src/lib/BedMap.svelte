@@ -7,10 +7,14 @@
     gridCells,
     moveSnapped,
     outlineBox,
+    parseLength,
     ringPath,
     rotateSnapped,
     samplePolygon,
     scaleFromHandle,
+    setDimension,
+    setEdgeLength,
+    simplify,
     setVertex,
     scaleHandles,
     SNAP_DEFAULT,
@@ -20,32 +24,44 @@
     type UnitSystem,
     type Vec,
   } from '@gardentrack/core';
-  import type { StoredBed, StoredObstruction } from '@gardentrack/store';
+  import type { StoredBed, StoredObstruction, StoredSurface } from '@gardentrack/store';
+  import type { Ring } from '@gardentrack/core';
+  import type { DrawTool } from './tools.js';
   import Handle from './Handle.svelte';
   import { fitTo, mmPerPixel, toWorld, viewBox, zoomAt, type View } from './viewport.js';
 
   interface Props {
     beds: StoredBed[];
     obstructions: StoredObstruction[];
+    surfaces: StoredSurface[];
+    tool: DrawTool;
     selectedId: string | null;
     snap: SnapSettings;
     units: UnitSystem;
     reshape: boolean;
+    selectedObstructionId: string | null;
     onselect: (id: string | null) => void;
+    onselectobstruction: (id: string | null) => void;
     onchange: (bed: StoredBed) => void;
     oncommit: (bed: StoredBed) => void;
+    ondraw: (tool: Exclude<DrawTool, 'select'>, ring: Ring) => void;
   }
 
   let {
     beds,
     obstructions,
+    surfaces,
+    tool,
     selectedId,
+    selectedObstructionId,
     snap = SNAP_DEFAULT,
     units,
     reshape,
     onselect,
+    onselectobstruction,
     onchange,
     oncommit,
+    ondraw,
   }: Props = $props();
 
   let svg: SVGSVGElement | undefined = $state();
@@ -68,6 +84,10 @@
     | { mode: 'vertex'; bed: StoredBed; index: number; liftMm: number };
   let drag: Drag | null = $state(null);
   let readout = $state('');
+  let stroke: Vec[] = $state([]);
+  let editingChip: Chip | null = $state(null);
+  let edgeValue = $state('');
+  let edgePopover: { x: number; y: number } | null = $state(null);
   const pointers = new Map<number, Vec>();
   let pinch: { distance: number; w: number } | null = null;
 
@@ -140,8 +160,15 @@
       drag = null;
       return;
     }
+    if (tool !== 'select') {
+      if (svg === undefined) return;
+      stroke = [toWorld(svg, event.clientX, event.clientY)];
+      return;
+    }
     if (drag === null) {
       onselect(null);
+      onselectobstruction(null);
+      closeEdgeEditor();
       beginPan(event);
     }
   }
@@ -151,6 +178,7 @@
     svg?.setPointerCapture(event.pointerId);
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     onselect(bed.id);
+    onselectobstruction(null);
     if (svg === undefined) return;
     drag = {
       mode: 'move',
@@ -203,6 +231,10 @@
       if (distance > 4) view = { ...view, w: (pinch.w * pinch.distance) / distance };
       return;
     }
+    if (stroke.length > 0 && svg !== undefined) {
+      stroke = [...stroke, toWorld(svg, event.clientX, event.clientY)];
+      return;
+    }
     if (drag === null || svg === undefined) return;
     const world = toWorld(svg, event.clientX, event.clientY);
 
@@ -252,6 +284,18 @@
   function endPointer(event: PointerEvent): void {
     pointers.delete(event.pointerId);
     if (pointers.size < 2) pinch = null;
+
+    if (stroke.length > 0) {
+      const drawn = stroke;
+      stroke = [];
+      // Simplify at a fixed screen distance, so the tolerance feels the same
+      // however far you are zoomed in.
+      const simplified = simplify(drawn, 9 * mmPerPx);
+      if (simplified.length >= 3 && tool !== 'select') {
+        ondraw(tool, { points: simplified, curved: true });
+      }
+      return;
+    }
     const finished = drag;
     drag = null;
     readout = '';
@@ -259,6 +303,101 @@
       const latest = beds.find((b) => b.id === finished.bed.id);
       if (latest !== undefined) oncommit(latest);
     }
+  }
+
+  /**
+   * A chip is an editable *dimension*, not a polygon segment — which is not the
+   * same thing, and conflating them gets both cases wrong:
+   *
+   * - a curved bed has no edges at all, only spline control points, so offering
+   *   to set the "length" of one would edit something meaningless;
+   * - a rounded metal bed has 28 points and four of them are edges, so per-point
+   *   chips would bury the two numbers anyone actually wants.
+   *
+   * So: real edges where the outline has them, overall width and height where it
+   * doesn't.
+   */
+  type Chip =
+    | { kind: 'edge'; index: number; at: Vec; normal: Vec; length: number }
+    | { kind: 'axis'; axis: 'w' | 'h'; at: Vec; normal: Vec; length: number };
+
+  function chipsFor(bed: StoredBed, box: Box): Chip[] {
+    const outline = classifyOutline(bed.outline);
+    const points = bed.outline.points;
+    const perEdge =
+      (outline.kind === 'rectangle' || outline.kind === 'polygon') && points.length <= 12;
+
+    if (perEdge) {
+      const chips: Chip[] = [];
+      for (let index = 0; index < points.length; index += 1) {
+        const a = points[index];
+        const b = points[(index + 1) % points.length];
+        if (a === undefined || b === undefined) continue;
+        const length = Math.hypot(b.x - a.x, b.y - a.y);
+        if (length <= 26 * mmPerPx) continue;
+        chips.push({
+          kind: 'edge',
+          index,
+          at: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+          normal: { x: -(b.y - a.y) / length, y: (b.x - a.x) / length },
+          length,
+        });
+      }
+      return chips;
+    }
+
+    return [
+      {
+        kind: 'axis',
+        axis: 'w',
+        at: { x: (box.x0 + box.x1) / 2, y: box.y1 },
+        normal: { x: 0, y: 1 },
+        length: box.x1 - box.x0,
+      },
+      {
+        kind: 'axis',
+        axis: 'h',
+        at: { x: box.x0, y: (box.y0 + box.y1) / 2 },
+        normal: { x: -1, y: 0 },
+        length: box.y1 - box.y0,
+      },
+    ];
+  }
+
+  function openEdgeEditor(chip: Chip, event: PointerEvent): void {
+    event.stopPropagation();
+    if (selected === null || host === undefined) return;
+    editingChip = chip;
+    edgeValue = formatLength(chip.length, units).replace(/[′″]/g, (m) => (m === '′' ? "'" : '"'));
+    const rect = host.getBoundingClientRect();
+    edgePopover = {
+      x: Math.min(Math.max(event.clientX - rect.left - 80, 8), rect.width - 200),
+      y: Math.min(Math.max(event.clientY - rect.top - 56, 8), rect.height - 60),
+    };
+  }
+
+  function closeEdgeEditor(): void {
+    editingChip = null;
+    edgePopover = null;
+  }
+
+  function applyEdgeLength(): void {
+    if (selected === null || editingChip === null) return;
+    const wanted = parseLength(edgeValue, units);
+    // Reject rather than guess: a silently wrong bed dimension is worse than a
+    // rejected one, and this number feeds the spacing maths.
+    if (wanted === null || wanted < 25) {
+      closeEdgeEditor();
+      return;
+    }
+    const chip = editingChip;
+    const outline =
+      chip.kind === 'edge'
+        ? setEdgeLength(selected.outline, chip.index, wanted)
+        : { ...selected.outline, points: setDimension(selected.outline.points, chip.axis, wanted) };
+    closeEdgeEditor();
+    onchange({ ...selected, outline });
+    oncommit({ ...selected, outline });
   }
 
   function onWheel(event: WheelEvent): void {
@@ -274,6 +413,7 @@
     viewBox={viewBox(view, aspect)}
     role="application"
     aria-label="Garden plan"
+    class:drawing={tool !== 'select'}
     onpointerdown={onSvgPointerDown}
     onpointermove={onPointerMove}
     onpointerup={endPointer}
@@ -292,8 +432,24 @@
     <rect x={view.x} y={view.y} width={view.w} height={view.w * aspect} fill="url(#fineGrid)" />
     <rect x={view.x} y={view.y} width={view.w} height={view.w * aspect} fill="url(#coarseGrid)" />
 
+    {#each surfaces as surface (surface.id)}
+      <path d={ringPath(surface.outline)} class="surface {surface.kind}" />
+    {/each}
+
     {#each obstructions as obstruction (obstruction.id)}
-      <path d={ringPath(obstruction.outline)} class="obstruction" />
+      <path
+        d={ringPath(obstruction.outline)}
+        class="obstruction"
+        class:selected={obstruction.id === selectedObstructionId}
+        role="button"
+        tabindex="0"
+        aria-label={obstruction.name}
+        onpointerdown={(event) => {
+          event.stopPropagation();
+          onselectobstruction(obstruction.id);
+          onselect(null);
+        }}
+      />
     {/each}
 
     {#each beds as bed (bed.id)}
@@ -383,6 +539,32 @@
           />
         {/each}
       {/if}
+      {#if !reshape}
+        {#each chipsFor(selected, selectedBox) as chip, i (`${chip.kind}-${i}`)}
+          {@const label = formatLength(chip.length, units)}
+          {@const cxp = chip.at.x + chip.normal.x * 17 * mmPerPx}
+          {@const cyp = chip.at.y + chip.normal.y * 17 * mmPerPx}
+          <g
+            class="edgechip"
+            role="button"
+            tabindex="0"
+            aria-label={`Set ${chip.kind === 'axis' ? (chip.axis === 'w' ? 'width' : 'height') : `edge ${chip.index + 1}`}, currently ${label}`}
+            onpointerdown={(event) => openEdgeEditor(chip, event)}
+          >
+            <rect
+              x={cxp - (label.length * 6.6 + 12) * mmPerPx * 0.5}
+              y={cyp - 11 * mmPerPx}
+              width={(label.length * 6.6 + 12) * mmPerPx}
+              height={22 * mmPerPx}
+              rx={3 * mmPerPx}
+              class="chipbox"
+            />
+            <text x={cxp} y={cyp + 4 * mmPerPx} class="chiptext" text-anchor="middle" font-size={11 * mmPerPx}
+              >{label}</text
+            >
+          </g>
+        {/each}
+      {/if}
       {#if readout !== ''}
         <text
           x={cx}
@@ -393,7 +575,26 @@
         >
       {/if}
     {/if}
+    {#if stroke.length > 1}
+      <path d={`M ${stroke.map((p) => `${p.x} ${p.y}`).join(' L ')}`} class="stroke" />
+    {/if}
   </svg>
+
+  {#if edgePopover !== null}
+    <div class="edgeedit" style="left:{edgePopover.x}px; top:{edgePopover.y}px">
+      <input
+        class="mono"
+        bind:value={edgeValue}
+        inputmode="decimal"
+        aria-label="Edge length"
+        onkeydown={(event) => {
+          if (event.key === 'Enter') applyEdgeLength();
+          if (event.key === 'Escape') closeEdgeEditor();
+        }}
+      />
+      <button type="button" onclick={applyEdgeLength}>Set</button>
+    </div>
+  {/if}
 
   {#if selected !== null && selectedBox !== null}
     <div class="measure mono">
@@ -407,6 +608,9 @@
       {/if}
       {#if shape !== null}
         <span class="shape">{shape.kind}</span>
+      {/if}
+      {#if !selected.dimensionsVerified}
+        <span class="estimate" title="Nothing has been measured yet">estimated</span>
       {/if}
     </div>
   {/if}
@@ -439,6 +643,17 @@
   .gridline.coarse {
     stroke: var(--rule);
   }
+  /* While a draw tool is live the stroke must be able to start anywhere,
+     including on top of a bed — otherwise the bed's own handler grabs it and
+     you move a bed when you meant to draw. */
+  svg.drawing .bed,
+  svg.drawing .obstruction,
+  svg.drawing .edgechip {
+    pointer-events: none;
+  }
+  svg.drawing {
+    cursor: crosshair;
+  }
   .bed {
     fill: var(--panel);
     stroke: var(--accent);
@@ -466,6 +681,11 @@
     stroke: var(--muted);
     stroke-width: 1.2px;
     vector-effect: non-scaling-stroke;
+    cursor: pointer;
+  }
+  .obstruction.selected {
+    stroke: var(--accent);
+    stroke-width: 2.5px;
   }
   .cell {
     fill: var(--accent);
@@ -520,5 +740,88 @@
   }
   .measure .shape {
     color: var(--muted);
+  }
+  .measure .estimate {
+    color: var(--warn);
+    border: 1px solid var(--warn);
+    border-radius: 20px;
+    padding: 0 8px;
+    font-size: 11.5px;
+  }
+  .surface {
+    stroke: none;
+    pointer-events: none;
+  }
+  .surface.gravel {
+    fill: var(--panel-2);
+  }
+  .surface.mulch {
+    fill: var(--warn);
+    fill-opacity: 0.16;
+  }
+  .surface.deck,
+  .surface.paver,
+  .surface.stone {
+    fill: var(--muted);
+    fill-opacity: 0.18;
+  }
+  .surface.grass {
+    fill: var(--plant);
+    fill-opacity: 0.1;
+  }
+  .stroke {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2px;
+    stroke-dasharray: 6 4;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+  }
+  .chipbox {
+    fill: var(--panel);
+    stroke: var(--accent);
+    stroke-width: 1px;
+    vector-effect: non-scaling-stroke;
+  }
+  .chiptext {
+    font-family: 'IBM Plex Mono', monospace;
+    fill: var(--accent-ink);
+    pointer-events: none;
+  }
+  .edgechip {
+    cursor: pointer;
+  }
+  .edgeedit {
+    position: absolute;
+    z-index: 5;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 7px;
+    box-shadow: var(--shadow);
+  }
+  .edgeedit input {
+    inline-size: 96px;
+    font: inherit;
+    font-size: 13px;
+    min-block-size: var(--target);
+    padding: 0 8px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: var(--ground);
+    color: var(--ink);
+  }
+  .edgeedit button {
+    min-block-size: var(--target);
+    padding: 0 12px;
+    border: 0;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 4px;
+    font: inherit;
+    cursor: pointer;
   }
 </style>

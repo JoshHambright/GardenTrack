@@ -672,3 +672,48 @@ job is to fail loudly rather than to guess.
 **Costs:** a `$state.snapshot()` at each call site, and a rule to remember. The
 typed error is what keeps it from being remembered the hard way twice.
 **Status:** ✅ Accepted
+
+---
+
+### D-030 · Surfaces are cosmetic, and that is the whole point
+**Chose:** Gravel, mulch, deck and paving are a `Surface` entity that is drawn
+on the plan and does **nothing else** — no coverage, no planting, no shade, no
+rotation, no history. Containers, by contrast, are **individually placed beds**
+with grow-bag size presets.
+**Why surfaces at all:** the real garden's beds sit in circulation space rather
+than against each other, and a plan showing four rectangles floating in a void is
+hard to match against what you are standing in. The surfaces are what make it
+recognisable, which is Phase 1's actual exit criterion.
+**Why cosmetic:** the moment a path carries a width and a surface type, something
+downstream wants to check a wheelbarrow fits, and that is a feature with a long
+payoff and permanent upkeep. Drawing them is a sketch; nothing should ever depend
+on that sketch being accurate.
+**Why containers are individual:** grouping twenty grow bags as "8 × 10-gallon"
+is far quicker to enter and destroys the thing the app is for — you could not then
+record that one bag got blight and another outproduced everything. Per-container
+history is the payoff; entering them one at a time is the price.
+**Costs:** two more collections, a drawing tool, and a plan that takes longer to
+enter. Surfaces are explicitly *not* modelled as beds, so nothing can accidentally
+plant into a path.
+**Status:** ✅ Accepted
+
+---
+
+### D-031 · A dimension chip is an editable measurement, not a polygon segment
+**Chose:** The tappable length labels on a selected bed are derived from its
+*classification*, not from its point list. Rectangles and simple polygons get one
+chip per real edge; rounded rectangles and curves get two — overall width and
+height.
+**Why:** conflating the two got both cases wrong in the first build, and the
+browser found it rather than the tests. A curved island bed has no edges at all,
+only spline control points, so offering to set the "length" of one edits something
+meaningless. A corrugated metal bed has twenty-eight points of which four are
+edges, so per-point chips buried the two numbers anyone actually wants behind
+twenty-four they don't.
+
+The honest primitive is "a number you can set", and which numbers those are is a
+property of the shape, not of how it happens to be stored.
+**Costs:** the chip list is computed rather than mapped, and the editor has two
+apply paths — `setEdgeLength` for an edge, `setDimension` for an axis. Both
+already existed and were already tested (P1-10).
+**Status:** ✅ Accepted

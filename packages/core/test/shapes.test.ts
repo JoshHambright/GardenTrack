@@ -91,3 +91,32 @@ describe('classifyOutline', () => {
     );
   });
 });
+
+describe('container templates (P1-20)', () => {
+  it('sizes grow bags by diameter, not by nominal gallons', () => {
+    const five = templateById('bag5')!.build({ x: 0, y: 0 });
+    const twenty = templateById('bag20')!.build({ x: 0, y: 0 });
+    const width = (r: { points: readonly { x: number; y: number }[] }) => {
+      const box = boundingBox(r.points);
+      return box.x1 - box.x0;
+    };
+    // 5 gal is 12 inches across; four times the volume is nowhere near four
+    // times the width, which is exactly why footprint is stored, not gallons.
+    expect(width(five) / 25.4).toBeCloseTo(12, 0);
+    expect(width(twenty) / 25.4).toBeCloseTo(20, 0);
+    expect(width(twenty) / width(five)).toBeLessThan(2);
+  });
+
+  it('separates containers from beds so the rail can group them', () => {
+    const groups = new Set(TEMPLATES.map((t) => t.group));
+    expect(groups).toEqual(new Set(['bed', 'container']));
+    expect(templateById('bag10')?.group).toBe('container');
+    expect(templateById('rect4x8')?.group).toBe('bed');
+  });
+
+  it('places a bag at the origin like every other template', () => {
+    const box = boundingBox(templateById('bag10')!.build({ x: 1000, y: 2000 }).points);
+    expect(box.x0).toBeCloseTo(1000, 3);
+    expect(box.y0).toBeCloseTo(2000, 3);
+  });
+});

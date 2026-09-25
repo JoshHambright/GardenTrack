@@ -39,6 +39,7 @@ const bedFields = (siteId: string, name: string): Omit<Bed, 'id'> => ({
   cellMm: 304.8,
   gridRotationDeg: 0,
   soilNotes: '',
+  dimensionsVerified: false,
   archivedAt: null,
 });
 
