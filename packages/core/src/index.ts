@@ -2,3 +2,8 @@ export * from './units.js';
 export * from './geo.js';
 export * from './ids.js';
 export * from './geometry.js';
+export * from './spline.js';
+export * from './snap.js';
+export * from './shapes.js';
+export * from './transform.js';
+export * from './model.js';
