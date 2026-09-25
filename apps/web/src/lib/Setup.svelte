@@ -15,6 +15,11 @@
     type FrostRisk,
     type GeoCell,
     type Site,
+    US_STATES,
+    ECOREGIONS,
+    stateRegion,
+    ecoregionRegion,
+    type RegionRef,
   } from '@gardentrack/core';
 
   interface Props {
@@ -28,6 +33,8 @@
   let firstFallP10 = $state('10-09');
   let firstFallP50 = $state('10-18');
   let frostRisk: FrostRisk = $state('cautious');
+  let stateCode = $state('');
+  let ecoregionCode = $state('');
   let cell: GeoCell | null = $state(null);
   let locating = $state(false);
   let locationError: string | null = $state(null);
@@ -49,6 +56,12 @@
   }
 
   function create(): void {
+    const regions: RegionRef[] = [];
+    const eco = ecoregionCode === '' ? null : ecoregionRegion(ecoregionCode);
+    const st = stateCode === '' ? null : stateRegion(stateCode);
+    if (eco !== null) regions.push(eco);
+    if (st !== null) regions.push(st);
+
     oncreate({
       name: 'Home',
       cell: cell ?? coarsen(0, 0),
@@ -61,8 +74,10 @@
         source: 'entered by hand',
       },
       frostRisk,
-      regions: [],
-      nativeStrictness: 'state',
+      regions,
+      // Claim nativity only at the scale actually recorded. With a state and no
+      // ecoregion, "native" means native to the state and says so.
+      nativeStrictness: regions.length === 0 ? 'off' : eco !== null ? 'ecoregion' : 'state',
     });
   }
 </script>
@@ -104,6 +119,29 @@
         >
       {/each}
     </div>
+  </section>
+
+  <section>
+    <span class="label">Region</span>
+    <p class="note">
+      Nativity has to be relative to somewhere, or "native" is a marketing word. A state is what
+      the plant data is published against, and picking one from a list tells nobody where you
+      live.
+    </p>
+    <label class="stack">
+      <span class="sublabel">State</span>
+      <select bind:value={stateCode} aria-label="State">
+        <option value="">Not set — no nativity claims</option>
+        {#each US_STATES as us (us.code)}<option value={us.code}>{us.name}</option>{/each}
+      </select>
+    </label>
+    <label class="stack">
+      <span class="sublabel">EPA ecoregion — optional, and a stricter claim</span>
+      <select bind:value={ecoregionCode} aria-label="Ecoregion">
+        <option value="">Not set</option>
+        {#each ECOREGIONS as eco (eco.code)}<option value={eco.code}>{eco.code} · {eco.name}</option>{/each}
+      </select>
+    </label>
   </section>
 
   <section>
@@ -194,6 +232,24 @@
     border-color: var(--accent);
     background: var(--accent-wash);
     color: var(--accent-ink);
+  }
+  .stack {
+    display: grid;
+    gap: 3px;
+  }
+  .sublabel {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  select {
+    font: inherit;
+    min-block-size: var(--target);
+    padding: 0 8px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: var(--ground);
+    color: var(--ink);
+    inline-size: 100%;
   }
   .cellinfo {
     margin: 0;

@@ -717,3 +717,65 @@ property of the shape, not of how it happens to be stored.
 apply paths — `setEdgeLength` for an edge, `setDimension` for an axis. Both
 already existed and were already tested (P1-10).
 **Status:** ✅ Accepted
+
+---
+
+### D-032 · Derive the frost profile from daily minima; `p10` is a risk, not a percentile
+**Chose:** `frostProfileFromMinima()` computes the profile from historical daily
+minimum temperatures at the site's coarse cell, rather than copying a published
+table. The fetch is an online-only enhancement; the arithmetic is pure and
+tested offline.
+**Why:** published dates for one real location disagreed by a fortnight in both
+directions, for three compounding reasons — a 32 °F freeze and a 36 °F frost are
+different events about two weeks apart, a "50% date" means half of all years
+frost after it, and the nearest long-record station is a city airport whose heat
+island flatters a rural garden. Deriving from minima at the gardener's own cell
+removes all three. It also fits D-028 exactly: the request carries a coarse cell
+and nothing else.
+**The distinction that had to be pinned by a test:** `lastSpring.p10` is a **risk
+level**, not the 10th percentile of last-frost dates. It means "plant after this
+and only 10% of years frost you", which is the **90th** percentile — the late
+end. `firstFall.p10` is the early end. Reading either as the percentile of the
+date distribution is a two-week error in the direction that kills seedlings, and
+nothing about the field name prevents it, so the test states it in words.
+**Costs:** needs a weather archive at runtime. This environment's network policy
+blocks the hosts, so the profile in CLIMATE.md stays provisional until the app
+runs in a browser or the policy allows one.
+**Status:** ✅ Accepted
+
+---
+
+### D-033 · Seed viability reports a status, never a predicted germination percentage
+**Chose:** `viabilityOf()` returns `fresh | good | test | past`, the packet's age,
+the species' typical longevity, and a recorded germination test where one exists.
+It never outputs an estimated percentage.
+**Why:** seed decline depends on storage humidity and temperature far more than
+on age, so "62% viable" would be a fabrication dressed as data — the same failure
+as an untiered companion table (D-021). The app knows the species' longevity and
+the packet's age; it says that, and says what it does not know. A recorded test
+overrides the estimate entirely, because a ten-year-old packet that germinates at
+85% is a good packet whatever the table says.
+**Costs:** the seed box cannot be sorted by a single number. It sorts worst-first
+by status instead, which is how the box is actually read — you open it to find
+what needs replacing.
+**Status:** ✅ Accepted
+
+---
+
+### D-034 · Nativity needs a region on the Site, and setup asks for one
+**Chose:** Setup asks for a US state (and optionally an EPA Level III ecoregion),
+and `nativeStrictness` follows what was actually recorded — `ecoregion` when an
+ecoregion is set, `state` when only a state is, `off` when neither.
+**Why:** found by driving the app rather than by a test. Without a region on the
+Site, `nativeTo()` correctly returns false for everything, so the "native here"
+filter silently returned nothing — the data was right and the feature was dead.
+Nativity is a claim *relative to somewhere*, and there was nowhere for it to be
+relative to.
+**Why a state is not a location disclosure:** Indiana holds nearly seven million
+people, the gardener picks it from a list rather than it being inferred, and it is
+the scale the plant data is published against. This does not weaken D-028; an
+ecoregion would be better still and cannot be derived offline without bundling
+boundary polygons.
+**Costs:** one more setup question, and existing sites created before this have
+no region until they are edited.
+**Status:** ✅ Accepted

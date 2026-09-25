@@ -11,3 +11,4 @@ export * from './frost.js';
 export * from './variety.js';
 export * from './seeds.js';
 export * from './catalog/index.js';
+export * from './regions.js';

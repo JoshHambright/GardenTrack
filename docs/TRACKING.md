@@ -42,7 +42,7 @@ titles: `P1-07: transform box for move, scale and rotate`.
 | — | Spikes | 2 | 1 | 🟨 Spike A published, iterating |
 | 0 | Foundation | 12 | **12** | ✅ **Complete** |
 | 1 | Site, beds, and the map | 21 | **20** | ✅ **Complete** (1 deferred) |
-| 2 | Plant library, natives, seed inventory | — | — | ⬜ Next |
+| 2 | Plant library, natives, seed inventory | 10 | **9** | 🟨 In progress |
 | 3 | Planning and the derived schedule | — | — | ⬜ unblocked |
 | 4 | Light and shade | — | — | ⬜ unblocked |
 | 5 | The in-season log | — | — | ⬜ |
@@ -153,7 +153,36 @@ beds, and flip each one to *Measured*.
 
 ---
 
-## Phases 2–11
+## Phase 2 — Plant library, natives, seed inventory
+
+| ID | Task | Status |
+|---|---|:---:|
+| P2-00 | Frost profile derived from daily minima, not a published table (D-032) | ✅ |
+| P2-00b | Fetch the archive at runtime — **blocked here**: the environment's network policy denies the weather hosts, so CLIMATE.md stays provisional | ⛔ |
+| P2-01 | `Variety` model: lifecycle, dtmFrom, spacing, feeder class, bloom window | ✅ |
+| P2-02 | Bundled catalog — 46 curated entries, versioned, `isCustom` never clobbered | ✅ |
+| P2-03 | Nativity as a set of regions, with a verdict naming which region (D-034) | ✅ |
+| P2-04 | Zone fit — perennials only, and "marginal" where rated exactly to this zone | ✅ |
+| P2-05 | Catalog browse, search and filters | ✅ |
+| P2-06 | Custom varieties — storage and repository done; no add-a-variety form yet | 🟨 |
+| P2-07 | `SeedPacket` model across seed, bulb, tuber, bare root, plug and potted | ✅ |
+| P2-08 | Viability from species longevity, overridden by a recorded test (D-033) | ✅ |
+| P2-09 | Seed inventory UI, sorted worst-first | ✅ |
+
+**Exit:** 🟨 a zone-and-region-filtered browse returns 19 natives of the Eastern
+Corn Belt Plains out of 46, every claim naming the region it is true of, and the
+seed box computes viability and is overridden by a recorded test — all verified in
+a browser. Outstanding: the frost archive fetch (blocked by network policy) and an
+add-a-variety form.
+
+**Honest limit on the nativity layer:** it is curated from regional reference
+lists, not joined to USDA PLANTS distribution data, which this environment cannot
+download. The catalog says so in `NATIVITY_PROVENANCE` rather than implying
+authority it does not have.
+
+---
+
+## Phases 3–11
 
 Scope lines only until each is next. Full descriptions and exit criteria are in
 [ROADMAP.md](./ROADMAP.md).

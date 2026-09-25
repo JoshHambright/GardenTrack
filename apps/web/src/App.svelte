@@ -15,6 +15,8 @@
     type Surface,
     type Ring,
     type ObstructionKind,
+    type SeedPacket,
+    type Variety,
   } from '@gardentrack/core';
   import {
     Garden,
@@ -22,10 +24,14 @@
     type StoredObstruction,
     type StoredSite,
     type StoredSurface,
+    type StoredSeedPacket,
+    type StoredVariety,
   } from '@gardentrack/store';
   import BedMap from './lib/BedMap.svelte';
   import { DRAW_TOOLS, type DrawTool } from './lib/tools.js';
   import { seedFromPhotos } from './lib/seed.js';
+  import Catalog from './lib/Catalog.svelte';
+  import Seeds from './lib/Seeds.svelte';
   import Setup from './lib/Setup.svelte';
   import { readViewport, type Viewport } from './lib/tier.js';
   import { requestPersistence } from './lib/registerSW.js';
@@ -37,6 +43,10 @@
   let obstructions: StoredObstruction[] = $state([]);
   let surfaces: StoredSurface[] = $state([]);
   let tool: DrawTool = $state('select');
+  type View = 'plan' | 'plants' | 'seeds';
+  let view: View = $state('plan');
+  let packets: StoredSeedPacket[] = $state([]);
+  let customVarieties: StoredVariety[] = $state([]);
   let selectedId: string | null = $state(null);
   let selectedObstructionId: string | null = $state(null);
   let units: UnitSystem = $state('imperial');
@@ -87,6 +97,42 @@
     beds = await g.activeBeds(siteId);
     obstructions = await g.activeObstructions(siteId);
     surfaces = await g.activeSurfaces(siteId);
+    packets = await g.packetsInHand();
+    customVarieties = await g.customVarieties();
+  }
+
+  async function addPacket(variety: Variety): Promise<void> {
+    if (garden === null) return;
+    const fields: Omit<SeedPacket, 'id'> = {
+      varietyId: variety.id,
+      form: variety.sowMethod === 'bareRoot' ? 'bareRoot' : 'seed',
+      purchasedYear: new Date().getFullYear(),
+      usedUpAt: null,
+    };
+    const saved = await garden.seedPackets.save(garden.seedPackets.create(fields as never));
+    packets = [...packets, saved];
+    view = 'seeds';
+  }
+
+  async function updatePacket(
+    packet: StoredSeedPacket,
+    changes: Partial<StoredSeedPacket>,
+  ): Promise<void> {
+    if (garden === null) return;
+    const saved = await garden.seedPackets.update(
+      $state.snapshot(packet) as StoredSeedPacket,
+      $state.snapshot(changes) as never,
+    );
+    packets = packets.map((p) => (p.id === saved.id ? saved : p));
+  }
+
+  async function removePacket(packet: StoredSeedPacket): Promise<void> {
+    if (garden === null) return;
+    await garden.seedPackets.update(
+      $state.snapshot(packet) as StoredSeedPacket,
+      { usedUpAt: Date.now() } as never,
+    );
+    packets = packets.filter((p) => p.id !== packet.id);
   }
 
   /**
@@ -223,6 +269,13 @@
         <span class="label">{describeSite(site)}</span>
       </div>
       <div class="controls">
+        <div class="seg views">
+          {#each [['plan', 'Plan'], ['plants', 'Plants'], ['seeds', `Seeds${packets.length ? ` (${packets.length})` : ''}`]] as [id, label] (id)}
+            <button type="button" aria-pressed={view === id} onclick={() => (view = id as View)}
+              >{label}</button
+            >
+          {/each}
+        </div>
         <div class="seg">
           {#each ['imperial', 'metric'] as system (system)}
             <button
@@ -242,7 +295,7 @@
       </div>
     </header>
 
-    <aside class="rail">
+    <aside class="rail" class:hidden={view !== 'plan'}>
       <span class="label">Beds</span>
       {#each TEMPLATES.filter((t) => t.group === 'bed') as template (template.id)}
         <button type="button" class="tool" onclick={() => addTemplate(template.id)}>
@@ -285,6 +338,11 @@
     </aside>
 
     <main>
+      {#if view === 'plants'}
+        <Catalog {site} custom={customVarieties} {units} onadd={addPacket} />
+      {:else if view === 'seeds'}
+        <Seeds {packets} custom={customVarieties} onupdate={updatePacket} onremove={removePacket} />
+      {:else}
       {#if tool !== 'select'}
         <p class="drawhint">
           Drag on the plan to draw. Nothing snaps — this is a sketch, not a measurement.
@@ -311,9 +369,10 @@
         oncommit={commitBed}
         ondraw={handleDraw}
       />
+      {/if}
     </main>
 
-    <aside class="inspector">
+    <aside class="inspector" class:hidden={view !== 'plan'}>
       {#if selectedObstruction !== null}
         <label class="field">
           <span class="label">Shadow caster</span>
@@ -541,6 +600,13 @@
     border-color: var(--accent);
     background: var(--accent-wash);
     color: var(--accent-ink);
+  }
+  .hidden {
+    display: none !important;
+  }
+  .seg.views button {
+    font-family: inherit;
+    font-size: 13px;
   }
   .rail {
     grid-area: rail;

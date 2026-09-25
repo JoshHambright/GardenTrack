@@ -1,4 +1,4 @@
-import type { Bed, Obstruction, Site, Surface } from '@gardentrack/core';
+import type { Bed, Obstruction, SeedPacket, Site, Surface, Variety } from '@gardentrack/core';
 import { Database, type StoreName } from './db.js';
 import { createRecord, isLive, softDelete, touch, type BaseRecord, type New } from './record.js';
 
@@ -14,6 +14,8 @@ export type StoredSite = Site & BaseRecord;
 export type StoredBed = Bed & BaseRecord;
 export type StoredObstruction = Obstruction & BaseRecord;
 export type StoredSurface = Surface & BaseRecord;
+export type StoredVariety = Variety & BaseRecord;
+export type StoredSeedPacket = SeedPacket & BaseRecord;
 
 class Collection<T extends BaseRecord> {
   constructor(
@@ -51,12 +53,16 @@ export class Garden {
   readonly beds: Collection<StoredBed>;
   readonly obstructions: Collection<StoredObstruction>;
   readonly surfaces: Collection<StoredSurface>;
+  readonly varieties: Collection<StoredVariety>;
+  readonly seedPackets: Collection<StoredSeedPacket>;
 
   private constructor(private readonly db: Database) {
     this.sites = new Collection<StoredSite>(db, 'sites');
     this.beds = new Collection<StoredBed>(db, 'beds');
     this.obstructions = new Collection<StoredObstruction>(db, 'obstructions');
     this.surfaces = new Collection<StoredSurface>(db, 'surfaces');
+    this.varieties = new Collection<StoredVariety>(db, 'varieties');
+    this.seedPackets = new Collection<StoredSeedPacket>(db, 'seedPackets');
   }
 
   static async open(factory?: IDBFactory): Promise<Garden> {
@@ -90,6 +96,16 @@ export class Garden {
   async activeSurfaces(siteId: string): Promise<StoredSurface[]> {
     const all = await this.surfaces.list();
     return all.filter((s) => s.siteId === siteId && s.archivedAt === null);
+  }
+
+  /** User additions only — the bundled catalog lives in code and is never
+   *  written to the database, so a catalog update cannot clobber them (D-006). */
+  async customVarieties(): Promise<StoredVariety[]> {
+    return (await this.varieties.list()).filter((v) => v.isCustom);
+  }
+
+  async packetsInHand(): Promise<StoredSeedPacket[]> {
+    return (await this.seedPackets.list()).filter((p) => p.usedUpAt === null);
   }
 
   async currentSite(): Promise<StoredSite | undefined> {
