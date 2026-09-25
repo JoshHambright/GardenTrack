@@ -7,3 +7,7 @@ export * from './snap.js';
 export * from './shapes.js';
 export * from './transform.js';
 export * from './model.js';
+export * from './frost.js';
+export * from './variety.js';
+export * from './seeds.js';
+export * from './catalog/index.js';
