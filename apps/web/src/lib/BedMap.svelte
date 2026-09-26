@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     boundingBox,
+    cellIndexAt,
     classifyOutline,
     effectiveCapacity,
     formatLength,
@@ -12,6 +13,8 @@
     rotateSnapped,
     samplePolygon,
     scaleFromHandle,
+    isDormantOn,
+    occupiesOn,
     setDimension,
     setEdgeLength,
     simplify,
@@ -24,7 +27,8 @@
     type UnitSystem,
     type Vec,
   } from '@gardentrack/core';
-  import type { StoredBed, StoredObstruction, StoredSurface } from '@gardentrack/store';
+  import type { StoredBed, StoredObstruction, StoredPlanting, StoredSurface } from '@gardentrack/store';
+  import type { CellRef, PlainDate, Variety } from '@gardentrack/core';
   import type { Ring } from '@gardentrack/core';
   import type { DrawTool } from './tools.js';
   import Handle from './Handle.svelte';
@@ -34,6 +38,10 @@
     beds: StoredBed[];
     obstructions: StoredObstruction[];
     surfaces: StoredSurface[];
+    plantings: StoredPlanting[];
+    date: PlainDate;
+    /** When set, dragging paints cells with this variety instead of panning. */
+    paintVariety: Variety | null;
     tool: DrawTool;
     selectedId: string | null;
     snap: SnapSettings;
@@ -45,12 +53,16 @@
     onchange: (bed: StoredBed) => void;
     oncommit: (bed: StoredBed) => void;
     ondraw: (tool: Exclude<DrawTool, 'select'>, ring: Ring) => void;
+    onpaint: (bedId: string, cells: readonly CellRef[]) => void;
   }
 
   let {
     beds,
     obstructions,
     surfaces,
+    plantings,
+    date,
+    paintVariety,
     tool,
     selectedId,
     selectedObstructionId,
@@ -62,6 +74,7 @@
     onchange,
     oncommit,
     ondraw,
+    onpaint,
   }: Props = $props();
 
   let svg: SVGSVGElement | undefined = $state();
@@ -88,6 +101,34 @@
   let editingChip: Chip | null = $state(null);
   let edgeValue = $state('');
   let edgePopover: { x: number; y: number } | null = $state(null);
+  let painting: { bedId: string; cells: Map<string, CellRef> } | null = $state(null);
+
+  const livePlantings = $derived(plantings.filter((p) => occupiesOn(p, date)));
+
+  function plantingsFor(bedId: string): StoredPlanting[] {
+    return livePlantings.filter((p) => p.bedId === bedId);
+  }
+
+  /** Paint uses the same lattice the cells are rendered from, so the two
+   *  cannot disagree about which square was touched. */
+  function cellUnder(bed: StoredBed, world: Vec): CellRef | null {
+    return cellIndexAt(samplePolygon(bed.outline), {
+      cellMm: bed.cellMm,
+      rotationDeg: bed.gridRotationDeg,
+    }, world);
+  }
+
+  function extendPaint(world: Vec): void {
+    if (painting === null) return;
+    const bed = beds.find((b) => b.id === painting?.bedId);
+    if (bed === undefined) return;
+    const cell = cellUnder(bed, world);
+    if (cell === null) return;
+    const key = `${cell.col}:${cell.row}`;
+    if (painting.cells.has(key)) return;
+    painting.cells.set(key, cell);
+    painting = { ...painting };
+  }
   const pointers = new Map<number, Vec>();
   let pinch: { distance: number; w: number } | null = null;
 
@@ -177,6 +218,12 @@
     event.stopPropagation();
     svg?.setPointerCapture(event.pointerId);
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (paintVariety !== null && bed.layoutMode === 'grid' && svg !== undefined) {
+      painting = { bedId: bed.id, cells: new Map() };
+      extendPaint(toWorld(svg, event.clientX, event.clientY));
+      return;
+    }
     onselect(bed.id);
     onselectobstruction(null);
     if (svg === undefined) return;
@@ -229,6 +276,10 @@
       const [a, b] = [...pointers.values()] as [Vec, Vec];
       const distance = Math.hypot(a.x - b.x, a.y - b.y);
       if (distance > 4) view = { ...view, w: (pinch.w * pinch.distance) / distance };
+      return;
+    }
+    if (painting !== null && svg !== undefined) {
+      extendPaint(toWorld(svg, event.clientX, event.clientY));
       return;
     }
     if (stroke.length > 0 && svg !== undefined) {
@@ -284,6 +335,13 @@
   function endPointer(event: PointerEvent): void {
     pointers.delete(event.pointerId);
     if (pointers.size < 2) pinch = null;
+
+    if (painting !== null) {
+      const finished = painting;
+      painting = null;
+      if (finished.cells.size > 0) onpaint(finished.bedId, [...finished.cells.values()]);
+      return;
+    }
 
     if (stroke.length > 0) {
       const drawn = stroke;
@@ -482,6 +540,46 @@
           {/each}
         </g>
       {/if}
+      {#each plantingsFor(bed.id) as planting (planting.id)}
+        {@const dormant = isDormantOn(planting, date)}
+        {#if planting.footprint.mode === 'cells'}
+          {@const cells = cellsFor(bed)}
+          <g
+            transform="rotate({bed.gridRotationDeg} {(box.x0 + box.x1) / 2} {(box.y0 + box.y1) / 2})"
+            class="planting"
+            class:dormant
+          >
+            {#each planting.footprint.cells as ref (`${ref.col}:${ref.row}`)}
+              {@const cell = cells.find((c) => c.col === ref.col && c.row === ref.row)}
+              {#if cell}
+                <rect
+                  x={cell.box.x0 + (cell.box.x1 - cell.box.x0) * 0.12}
+                  y={cell.box.y0 + (cell.box.y1 - cell.box.y0) * 0.12}
+                  width={(cell.box.x1 - cell.box.x0) * 0.76}
+                  height={(cell.box.y1 - cell.box.y0) * 0.76}
+                  rx={(cell.box.x1 - cell.box.x0) * 0.1}
+                  class="plantcell"
+                />
+              {/if}
+            {/each}
+          </g>
+        {:else if planting.footprint.mode === 'drift'}
+          <path
+            d={ringPath(planting.footprint.ring)}
+            class="drift"
+            class:dormant
+          />
+        {:else}
+          <circle
+            cx={planting.footprint.x}
+            cy={planting.footprint.y}
+            r={planting.footprint.radiusMm}
+            class="specimen"
+            class:dormant
+          />
+        {/if}
+      {/each}
+
       <text
         x={(box.x0 + box.x1) / 2}
         y={box.y0 - 26 * mmPerPx}
@@ -573,6 +671,27 @@
           text-anchor="middle"
           font-size={13 * mmPerPx}>{readout}</text
         >
+      {/if}
+    {/if}
+    {#if painting !== null}
+      {@const bed = beds.find((b) => b.id === painting?.bedId)}
+      {#if bed}
+        {@const cells = cellsFor(bed)}
+        {@const pbox = outlineBox(bed.outline)}
+        <g transform="rotate({bed.gridRotationDeg} {(pbox.x0 + pbox.x1) / 2} {(pbox.y0 + pbox.y1) / 2})">
+          {#each [...painting.cells.values()] as ref (`${ref.col}:${ref.row}`)}
+            {@const cell = cells.find((c) => c.col === ref.col && c.row === ref.row)}
+            {#if cell}
+              <rect
+                x={cell.box.x0}
+                y={cell.box.y0}
+                width={cell.box.x1 - cell.box.x0}
+                height={cell.box.y1 - cell.box.y0}
+                class="paint"
+              />
+            {/if}
+          {/each}
+        </g>
       {/if}
     {/if}
     {#if stroke.length > 1}
@@ -686,6 +805,42 @@
   .obstruction.selected {
     stroke: var(--accent);
     stroke-width: 2.5px;
+  }
+  .plantcell {
+    fill: var(--plant);
+    fill-opacity: 0.55;
+    pointer-events: none;
+  }
+  .drift {
+    fill: var(--plant);
+    fill-opacity: 0.18;
+    stroke: var(--plant);
+    stroke-width: 1.5px;
+    stroke-dasharray: 5 4;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+  }
+  .specimen {
+    fill: var(--plant);
+    fill-opacity: 0.2;
+    stroke: var(--plant);
+    stroke-width: 1.5px;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+  }
+  /* Dormant is a drawing state, never an occupancy one (D-036). The ground is
+     still taken; it just does not look it, which is the whole problem. */
+  .dormant {
+    fill-opacity: 0.12;
+    stroke-dasharray: 3 5;
+  }
+  .paint {
+    fill: var(--accent);
+    fill-opacity: 0.45;
+    stroke: var(--accent);
+    stroke-width: 1.5px;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
   }
   .cell {
     fill: var(--accent);

@@ -17,6 +17,24 @@
     type ObstructionKind,
     type SeedPacket,
     type Variety,
+    type CellRef,
+    type PlainDate,
+    type Planting,
+    type PlacementConflict,
+    BUNDLED_CATALOG,
+    planSpring,
+    placementConflicts,
+    checkSpacing,
+    suggestCompanions,
+    sortByConfidence,
+    evaluatePair,
+    viabilityOf,
+    MECHANISM_LABEL,
+    gridCells,
+    samplePolygon,
+    UnschedulableError,
+    varietyById,
+    type SeedBoxState,
   } from '@gardentrack/core';
   import {
     Garden,
@@ -26,12 +44,14 @@
     type StoredSurface,
     type StoredSeedPacket,
     type StoredVariety,
+    type StoredPlanting,
   } from '@gardentrack/store';
   import BedMap from './lib/BedMap.svelte';
   import { DRAW_TOOLS, type DrawTool } from './lib/tools.js';
   import { seedFromPhotos } from './lib/seed.js';
   import Catalog from './lib/Catalog.svelte';
   import Seeds from './lib/Seeds.svelte';
+  import DateScrubber from './lib/DateScrubber.svelte';
   import Setup from './lib/Setup.svelte';
   import { readViewport, type Viewport } from './lib/tier.js';
   import { requestPersistence } from './lib/registerSW.js';
@@ -47,6 +67,38 @@
   let view: View = $state('plan');
   let packets: StoredSeedPacket[] = $state([]);
   let customVarieties: StoredVariety[] = $state([]);
+  let plantings: StoredPlanting[] = $state([]);
+  let today = new Date().toISOString().slice(0, 10) as PlainDate;
+  let planYear = $state(Number(today.slice(0, 4)));
+  let date: PlainDate = $state(today);
+  let paintVariety: Variety | null = $state(null);
+  let pending: { bedId: string; cells: CellRef[]; conflicts: PlacementConflict[] } | null = $state(null);
+  let lastPlanted: StoredPlanting | null = $state(null);
+
+  const allVarieties = $derived<Variety[]>([...BUNDLED_CATALOG, ...customVarieties]);
+  const varietyFor = (id: string): Variety | undefined => allVarieties.find((v) => v.id === id);
+
+  /** What the seed box says about a variety — the filter that makes a
+   *  suggestion actionable this weekend rather than aspirational. */
+  function seedBoxOf(variety: Variety): SeedBoxState {
+    if (plantings.some((p) => p.varietyId === variety.id && p.seasonYear === planYear)) return 'planted';
+    const packet = packets.find((p) => p.varietyId === variety.id);
+    if (packet === undefined) return 'none';
+    return viabilityOf(packet, variety).status === 'past' ? 'haveStale' : 'have';
+  }
+
+  const armedSchedule = $derived.by(() => {
+    if (paintVariety === null || site === null) return null;
+    try {
+      return planSpring(paintVariety, site, planYear);
+    } catch (error) {
+      return error instanceof UnschedulableError ? { error: error.message } : null;
+    }
+  });
+
+  const suggestions = $derived(
+    paintVariety === null ? [] : suggestCompanions(paintVariety, allVarieties, seedBoxOf).slice(0, 6),
+  );
   let selectedId: string | null = $state(null);
   let selectedObstructionId: string | null = $state(null);
   let units: UnitSystem = $state('imperial');
@@ -98,6 +150,7 @@
     obstructions = await g.activeObstructions(siteId);
     surfaces = await g.activeSurfaces(siteId);
     packets = await g.packetsInHand();
+    plantings = await g.plantingsForSite(siteId);
     customVarieties = await g.customVarieties();
   }
 
@@ -228,6 +281,51 @@
     await reload(garden, site.id);
   }
 
+  async function handlePaint(bedId: string, cells: readonly CellRef[]): Promise<void> {
+    if (paintVariety === null) return;
+    const conflicts = placementConflicts(plantings, bedId, { mode: 'cells', cells }, date);
+    if (conflicts.length > 0) {
+      pending = { bedId, cells: [...cells], conflicts };
+      return;
+    }
+    await commitPlanting(bedId, cells);
+  }
+
+  async function commitPlanting(bedId: string, cells: readonly CellRef[]): Promise<void> {
+    if (garden === null || site === null || paintVariety === null) return;
+    const variety = paintVariety;
+    let schedule;
+    try {
+      schedule = planSpring(variety, site, planYear);
+    } catch {
+      return;
+    }
+    const fields: Omit<Planting, 'id'> = {
+      bedId,
+      varietyId: variety.id,
+      seasonYear: planYear,
+      footprint: { mode: 'cells', cells: [...cells] },
+      method: variety.sowMethod === 'transplant' ? 'transplant' : 'directSow',
+      plannedSowDate: schedule.sow,
+      plannedTransplantDate: schedule.transplant ?? undefined,
+      plannedFirstHarvest: schedule.firstHarvest,
+      plannedEndDate: schedule.end,
+      // A herbaceous perennial dies back to the ground and looks like bare soil
+      // for five months of the year. Recording that is what lets a conflict say
+      // "dormant right now" rather than leaving the gardener to disbelieve it
+      // (D-036). Woody plants stay visible, so they get no window.
+      ...(variety.lifecycle === 'perennial' || variety.lifecycle === 'bulb'
+        ? { dormantFrom: 11, dormantTo: 3 }
+        : {}),
+      status: 'planned',
+      notes: '',
+    };
+    const saved = await garden.plantings.save(garden.plantings.create($state.snapshot(fields) as never));
+    plantings = [...plantings, saved];
+    lastPlanted = saved;
+    pending = null;
+  }
+
   /** Live during a drag — not written until the gesture ends. */
   function previewBed(next: StoredBed): void {
     beds = beds.map((bed) => (bed.id === next.id ? next : bed));
@@ -339,10 +437,44 @@
 
     <main>
       {#if view === 'plants'}
-        <Catalog {site} custom={customVarieties} {units} onadd={addPacket} />
+        <Catalog
+          {site}
+          custom={customVarieties}
+          {units}
+          onadd={addPacket}
+          onplant={(variety) => {
+            paintVariety = variety;
+            view = 'plan';
+          }}
+        />
       {:else if view === 'seeds'}
         <Seeds {packets} custom={customVarieties} onupdate={updatePacket} onremove={removePacket} />
       {:else}
+      {#if pending !== null}
+        <div class="conflict">
+          <div>
+            <b>Something is already there.</b>
+            {#each pending.conflicts as conflict (conflict.with.id)}
+              <p>
+                {varietyFor(conflict.with.varietyId)?.commonName ?? 'A planting'}
+                {#if conflict.dormant}
+                  — <b>dormant right now</b>, so the ground looks empty and is not
+                {/if}
+                {#if conflict.cells}({conflict.cells.length} cells){/if}
+              </p>
+            {/each}
+          </div>
+          <div class="cbuttons">
+            <button type="button" onclick={() => (pending = null)}>Cancel</button>
+            <button
+              type="button"
+              class="danger"
+              onclick={() => pending && commitPlanting(pending.bedId, pending.cells)}
+              >Plant anyway</button
+            >
+          </div>
+        </div>
+      {/if}
       {#if tool !== 'select'}
         <p class="drawhint">
           Drag on the plan to draw. Nothing snaps — this is a sketch, not a measurement.
@@ -368,12 +500,95 @@
         onchange={previewBed}
         oncommit={commitBed}
         ondraw={handleDraw}
+        onpaint={handlePaint}
+        {plantings}
+        {date}
+        {paintVariety}
       />
+      {/if}
+      {#if view === 'plan'}
+        <DateScrubber
+          {date}
+          year={planYear}
+          {site}
+          onchange={(d) => (date = d)}
+          onyear={(y) => {
+            planYear = y;
+            // Keep the day, move the year — scrubbing into next March should
+            // land in next March, not jump to January.
+            date = `${y}${date.slice(4)}` as PlainDate;
+          }}
+        />
       {/if}
     </main>
 
     <aside class="inspector" class:hidden={view !== 'plan'}>
-      {#if selectedObstruction !== null}
+      {#if paintVariety !== null}
+        <div class="field">
+          <span class="label">Planting</span>
+          <b class="armed">{paintVariety.commonName}</b>
+          <p class="note">Drag across cells in an annual bed to place it.</p>
+          <button type="button" class="chip" onclick={() => (paintVariety = null)}>Done</button>
+        </div>
+
+        {#if armedSchedule !== null && 'sow' in armedSchedule}
+          <div class="field">
+            <span class="label">Derived schedule · {planYear}</span>
+            <dl class="sched mono">
+              {#if armedSchedule.startIndoors}
+                <div><dt>Start indoors</dt><dd>{armedSchedule.startIndoors}</dd></div>
+              {/if}
+              <div><dt>{armedSchedule.transplant ? 'Transplant' : 'Sow'}</dt>
+                <dd>{armedSchedule.transplant ?? armedSchedule.sow}</dd></div>
+              <div><dt>First harvest</dt><dd>{armedSchedule.firstHarvest}</dd></div>
+              <div><dt>Ends</dt><dd>{armedSchedule.end ?? 'never — perennial'}</dd></div>
+            </dl>
+            {#each armedSchedule.notes as note (note)}<p class="note">{note}</p>{/each}
+            <p class="note">
+              Every date computed from your frost profile at the
+              <b>{site.frostRisk}</b> risk level. Nothing was typed.
+            </p>
+          </div>
+        {:else if armedSchedule !== null}
+          <p class="note warnbox">{armedSchedule.error}</p>
+        {/if}
+
+        {#if suggestions.length > 0}
+          <div class="field">
+            <span class="label">Plant it near</span>
+            <ul class="suggest">
+              {#each suggestions as suggestion (suggestion.variety.id)}
+                {@const top = suggestion.findings[0]}
+                <li>
+                  <div class="srow">
+                    <b>{suggestion.variety.commonName}</b>
+                    <span class="box {suggestion.seedBox}">
+                      {suggestion.seedBox === 'have'
+                        ? 'in your box'
+                        : suggestion.seedBox === 'haveStale'
+                          ? 'have, past it'
+                          : suggestion.seedBox === 'planted'
+                            ? 'already planted'
+                            : 'not in your box'}
+                    </span>
+                  </div>
+                  {#if top}
+                    <p class="why">
+                      {MECHANISM_LABEL[top.mechanism]}
+                      <span class="tier {top.evidence}">{top.evidence}</span>
+                    </p>
+                    <p class="src">{top.note}</p>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+            <p class="note">
+              Ordered by what's already in your seed box, then by evidence. The tier is on every
+              row on purpose — a lot of companion advice has never survived a trial.
+            </p>
+          </div>
+        {/if}
+      {:else if selectedObstruction !== null}
         <label class="field">
           <span class="label">Shadow caster</span>
           <input
@@ -662,6 +877,131 @@
     border-radius: var(--radius);
     padding: 8px 12px;
     font-size: 13px;
+  }
+  .armed {
+    font-size: 16px;
+  }
+  .sched {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .sched div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .sched dt {
+    color: var(--muted);
+  }
+  .sched dd {
+    margin: 0;
+  }
+  .suggest {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 7px;
+  }
+  .suggest li {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 7px 9px;
+  }
+  .srow {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .srow b {
+    font-size: 13.5px;
+  }
+  .box {
+    font-size: 11px;
+    border-radius: 20px;
+    padding: 1px 8px;
+    border: 1px solid var(--rule);
+    color: var(--muted);
+  }
+  .box.have {
+    border-color: var(--plant);
+    color: var(--plant);
+  }
+  .box.haveStale {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  .why {
+    margin: 4px 0 0;
+    font-size: 12.5px;
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+  .tier {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-radius: 20px;
+    padding: 0 7px;
+    border: 1px solid var(--rule);
+    color: var(--muted);
+  }
+  .tier.trial {
+    border-color: var(--plant);
+    color: var(--plant);
+  }
+  .tier.traditional {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  .src {
+    margin: 3px 0 0;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .conflict {
+    position: absolute;
+    z-index: 5;
+    inset-block-start: 10px;
+    inset-inline: 10px;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    background: var(--panel);
+    border: 1px solid var(--warn);
+    border-radius: var(--radius);
+    padding: 10px 13px;
+    box-shadow: var(--shadow);
+  }
+  .conflict p {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .cbuttons {
+    display: flex;
+    gap: 7px;
+  }
+  .cbuttons button {
+    min-block-size: var(--target);
+    padding: 0 13px;
+    border: 1px solid var(--rule);
+    background: var(--ground);
+    color: var(--ink);
+    border-radius: var(--radius);
+    font: inherit;
+    cursor: pointer;
+  }
+  .cbuttons .danger {
+    border-color: var(--warn);
+    color: var(--warn);
   }
   .drawhint button {
     min-block-size: var(--target);

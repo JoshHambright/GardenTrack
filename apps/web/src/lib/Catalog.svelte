@@ -21,8 +21,9 @@
     custom: StoredVariety[];
     units: UnitSystem;
     onadd: (variety: Variety) => void;
+    onplant: (variety: Variety) => void;
   }
-  const { site, custom, units, onadd }: Props = $props();
+  const { site, custom, units, onadd, onplant }: Props = $props();
 
   let search = $state('');
   let nativeOnly = $state(false);
@@ -99,7 +100,10 @@
             <b>{variety.commonName}</b>
             {#if variety.scientificName}<i>{variety.scientificName}</i>{/if}
           </div>
-          <button type="button" class="chip add" onclick={() => onadd(variety)}>Add seed</button>
+          <div class="acts">
+            <button type="button" class="chip" onclick={() => onadd(variety)}>Add seed</button>
+            <button type="button" class="chip add" onclick={() => onplant(variety)}>Plant</button>
+          </div>
         </div>
 
         <div class="badges">
@@ -197,6 +201,10 @@
     border-color: var(--accent);
     background: var(--accent-wash);
     color: var(--accent-ink);
+  }
+  .acts {
+    display: flex;
+    gap: 5px;
   }
   .chip.add {
     color: var(--accent-ink);

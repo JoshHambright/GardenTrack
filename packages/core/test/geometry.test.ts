@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   boundingBox,
+  cellIndexAt,
   clipToRect,
   COVERAGE_FULL,
   COVERAGE_MIN,
@@ -152,5 +153,45 @@ describe('simplify', () => {
       { x: 100, y: 100 },
     ];
     expect(simplify(stroke, 1).length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('cellIndexAt', () => {
+  const bed = rect(0, 0, 4, 8);
+  const options = { cellMm: MM_PER_FOOT };
+
+  it('agrees with the lattice gridCells produced', () => {
+    // Painting a cell and rendering it must not be able to disagree.
+    const cells = gridCells(bed, options);
+    for (const cell of cells) {
+      const middle = {
+        x: (cell.box.x0 + cell.box.x1) / 2,
+        y: (cell.box.y0 + cell.box.y1) / 2,
+      };
+      expect(cellIndexAt(bed, options, middle)).toEqual({ col: cell.col, row: cell.row });
+    }
+  });
+
+  it('returns null outside the bed', () => {
+    expect(cellIndexAt(bed, options, { x: feet(9), y: feet(9) })).toBeNull();
+  });
+
+  it('returns null in the notch of an L-shaped bed', () => {
+    const l: Polygon = [
+      { x: 0, y: 0 },
+      { x: feet(8), y: 0 },
+      { x: feet(8), y: feet(4) },
+      { x: feet(4), y: feet(4) },
+      { x: feet(4), y: feet(8) },
+      { x: 0, y: feet(8) },
+    ];
+    expect(cellIndexAt(l, options, { x: feet(6), y: feet(6) })).toBeNull();
+    expect(cellIndexAt(l, options, { x: feet(6), y: feet(2) })).not.toBeNull();
+  });
+
+  it('follows the grid when it is rotated independently of the bed', () => {
+    const straight = cellIndexAt(bed, options, { x: feet(0.5), y: feet(0.5) });
+    const angled = cellIndexAt(bed, { ...options, rotationDeg: 45 }, { x: feet(0.5), y: feet(0.5) });
+    expect(straight).not.toEqual(angled);
   });
 });

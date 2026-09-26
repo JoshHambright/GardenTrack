@@ -1,4 +1,4 @@
-import type { Bed, Obstruction, SeedPacket, Site, Surface, Variety } from '@gardentrack/core';
+import type { Bed, Obstruction, Planting, SeedPacket, Site, Surface, Variety } from '@gardentrack/core';
 import { Database, type StoreName } from './db.js';
 import { createRecord, isLive, softDelete, touch, type BaseRecord, type New } from './record.js';
 
@@ -16,6 +16,7 @@ export type StoredObstruction = Obstruction & BaseRecord;
 export type StoredSurface = Surface & BaseRecord;
 export type StoredVariety = Variety & BaseRecord;
 export type StoredSeedPacket = SeedPacket & BaseRecord;
+export type StoredPlanting = Planting & BaseRecord;
 
 class Collection<T extends BaseRecord> {
   constructor(
@@ -55,6 +56,7 @@ export class Garden {
   readonly surfaces: Collection<StoredSurface>;
   readonly varieties: Collection<StoredVariety>;
   readonly seedPackets: Collection<StoredSeedPacket>;
+  readonly plantings: Collection<StoredPlanting>;
 
   private constructor(private readonly db: Database) {
     this.sites = new Collection<StoredSite>(db, 'sites');
@@ -63,6 +65,7 @@ export class Garden {
     this.surfaces = new Collection<StoredSurface>(db, 'surfaces');
     this.varieties = new Collection<StoredVariety>(db, 'varieties');
     this.seedPackets = new Collection<StoredSeedPacket>(db, 'seedPackets');
+    this.plantings = new Collection<StoredPlanting>(db, 'plantings');
   }
 
   static async open(factory?: IDBFactory): Promise<Garden> {
@@ -106,6 +109,13 @@ export class Garden {
 
   async packetsInHand(): Promise<StoredSeedPacket[]> {
     return (await this.seedPackets.list()).filter((p) => p.usedUpAt === null);
+  }
+
+  /** Every planting for the site, live or historical — occupancy is a query
+   *  over date ranges, so filtering by season here would defeat the model. */
+  async plantingsForSite(siteId: string): Promise<StoredPlanting[]> {
+    const beds = new Set((await this.beds.list()).filter((b) => b.siteId === siteId).map((b) => b.id));
+    return (await this.plantings.list()).filter((p) => beds.has(p.bedId));
   }
 
   async currentSite(): Promise<StoredSite | undefined> {

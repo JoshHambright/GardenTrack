@@ -43,7 +43,7 @@ titles: `P1-07: transform box for move, scale and rotate`.
 | 0 | Foundation | 12 | **12** | ✅ **Complete** |
 | 1 | Site, beds, and the map | 21 | **20** | ✅ **Complete** (1 deferred) |
 | 2 | Plant library, natives, seed inventory | 10 | **9** | 🟨 In progress |
-| 3 | Planning and the derived schedule | 12 | **7** | 🟨 In progress |
+| 3 | Planning and the derived schedule | 12 | **10** | ✅ **Complete** (1 cut, 1 partial) |
 | 4 | Light and shade | — | — | ⬜ unblocked |
 | 5 | The in-season log | — | — | ⬜ |
 | 6 | Tasks and reminders | — | — | ⬜ |
@@ -194,13 +194,26 @@ authority it does not have.
 | P3-06 | Mature-spread projection on a decelerating curve | ✅ |
 | P3-07 | Companion evaluation: table + derived, tiered and radius-aware (D-021/22) | ✅ |
 | P3-08 | Succession — one action generating a staggered series | ✅ |
-| P3-09 | Painted light and sun-requirement warnings | ⬜ |
-| P3-10 | Bed occupancy timeline | ⬜ |
-| P3-11 | Copy last season as a starting point | ⬜ |
-| P3-12 | Planner UI — place, warn, suggest | ⬜ |
+| P3-09 | Painted light and sun-requirement warnings — **cut**: Josh's call, and hand-painting light that Phase 4 then computes is work thrown away | ❌ |
+| P3-10 | Bed occupancy timeline — the **date scrubber** carries this instead: dragging it fills and empties the beds through the year (D-037) | ✅ |
+| P3-11 | Copy last season as a starting point — year stepping makes next season plannable; a copy action is still to build | 🟨 |
+| P3-12 | Planner UI — drag-paint placement, derived schedule, conflict warnings, companion suggestions | ✅ |
 
-**Exit:** 🟨 the domain is done and tested; the planner UI is not built. 192 tests
-cover every claim in the exit criterion except the ones that need a screen.
+**Exit:** ✅ met, verified in a browser rather than asserted.
+
+- A tomato armed from the catalog derives its whole schedule from the frost
+  profile — indoors 1 Apr, transplant 20 May, first harvest 3 Aug, ends 2 Oct.
+  Nothing was typed.
+- Dragging across cells plants it; scrubbing to mid-March empties the bed and
+  mid-July fills it, so a bed turning over is watched rather than inferred.
+- The top companion suggestion for tomato is **Basil · in your box · "is said to
+  repel its pests" · traditional** — actionable this weekend, with the evidence
+  tier on the face of it.
+- Placing lettuce over a coneflower's second spring raises: *"Purple coneflower
+  — dormant right now, so the ground looks empty and is not (2 cells)"*.
+
+Outstanding: a copy-last-season action, and drift/specimen placement in native
+beds still has no UI gesture (the model and rendering are done).
 
 ---
 

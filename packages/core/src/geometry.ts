@@ -176,6 +176,34 @@ export function gridCells(outline: Polygon, options: GridOptions): GridCell[] {
 }
 
 /**
+ * Which cell is this point in? Mirrors `gridCells`' lattice exactly — same
+ * origin, same rotation — so painting a cell and rendering it cannot disagree.
+ * Returns null outside the outline.
+ */
+export function cellIndexAt(
+  outline: Polygon,
+  options: GridOptions,
+  point: Vec,
+): { col: number; row: number } | null {
+  const { cellMm } = options;
+  if (cellMm <= 0 || outline.length < 3) return null;
+  const rotationDeg = options.rotationDeg ?? 0;
+  const pivot = centroid(outline);
+  const toGrid = (p: Vec): Vec => (rotationDeg === 0 ? p : rotate(p, pivot, -rotationDeg));
+  const local = outline.map(toGrid);
+  const localPoint = toGrid(point);
+  if (!pointInPolygon(localPoint, local)) return null;
+
+  const bounds = boundingBox(local);
+  const originX = Math.floor(bounds.x0 / cellMm) * cellMm;
+  const originY = Math.floor(bounds.y0 / cellMm) * cellMm;
+  return {
+    col: Math.floor((localPoint.x - originX) / cellMm),
+    row: Math.floor((localPoint.y - originY) / cellMm),
+  };
+}
+
+/**
  * Plantable capacity in whole cells. Partial cells count pro-rata; cells below
  * COVERAGE_MIN count for nothing.
  */

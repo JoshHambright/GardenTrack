@@ -811,3 +811,22 @@ the bed — so the warning has to answer the objection before it is raised.
 **Costs:** two functions where one looks sufficient, and a test suite that checks
 all twelve months rather than a representative one.
 **Status:** ✅ Accepted
+
+---
+
+### D-037 · The date scrubber steps years, because perennials outlive a season
+**Chose:** The plan's time control is a day-of-year scrubber **plus** year
+stepping, and the planning year follows the scrubber rather than being fixed to
+the present.
+**Why:** found by driving the app. A coneflower planted this April is genuinely
+not in the ground *last* March, so the dormancy conflict — the case the whole
+occupancy model exists for — could not be demonstrated at all in a single-year
+app. The behaviour was correct and the product could not express it.
+
+Stepping years also makes next season plannable, which the roadmap wanted
+anyway, and makes a perennial's second spring the obvious thing to look at
+rather than a thought experiment.
+**Costs:** the plan view now has two time dimensions to keep coherent. Stepping a
+year keeps the day and moves the year, so scrubbing into next March lands in next
+March rather than jumping to January.
+**Status:** ✅ Accepted
