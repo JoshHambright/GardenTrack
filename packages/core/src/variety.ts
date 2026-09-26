@@ -57,6 +57,17 @@ export interface Variety {
   hostGenera: readonly string[];
 
   seedLongevityYears: number;
+
+  /* Scheduling offsets. All optional — sensible values are derived from
+   * frostTolerance when absent (see schedule.ts), so a catalog entry only
+   * carries them when the conventional derivation is wrong for it. */
+  /** Days relative to last spring frost. Negative for hardy crops. */
+  transplantOffsetDays?: number | undefined;
+  directSowOffsetDays?: number | undefined;
+  weeksIndoors?: number | undefined;
+  /** How long picking lasts once it starts. */
+  harvestWindowDays?: number | undefined;
+
   isCustom: boolean;
   notes?: string | undefined;
 }

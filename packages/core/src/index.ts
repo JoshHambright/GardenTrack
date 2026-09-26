@@ -12,3 +12,6 @@ export * from './variety.js';
 export * from './seeds.js';
 export * from './catalog/index.js';
 export * from './regions.js';
+export * from './dates.js';
+export * from './schedule.js';
+export * from './planting.js';
