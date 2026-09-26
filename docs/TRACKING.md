@@ -43,7 +43,7 @@ titles: `P1-07: transform box for move, scale and rotate`.
 | 0 | Foundation | 12 | **12** | ✅ **Complete** |
 | 1 | Site, beds, and the map | 21 | **20** | ✅ **Complete** (1 deferred) |
 | 2 | Plant library, natives, seed inventory | 10 | **9** | 🟨 In progress |
-| 3 | Planning and the derived schedule | — | — | ⬜ unblocked |
+| 3 | Planning and the derived schedule | 12 | **7** | 🟨 In progress |
 | 4 | Light and shade | — | — | ⬜ unblocked |
 | 5 | The in-season log | — | — | ⬜ |
 | 6 | Tasks and reminders | — | — | ⬜ |
@@ -182,7 +182,29 @@ authority it does not have.
 
 ---
 
-## Phases 3–11
+## Phase 3 — Planning and the derived schedule
+
+| ID | Task | Status |
+|---|---|:---:|
+| P3-01 | `Planting` with the three footprint modes and planned/actual date pairs | ✅ |
+| P3-02 | Derived schedule, spring anchored to last frost | ✅ |
+| P3-03 | Derived schedule, fall counted back from first frost, with the short-day penalty | ✅ |
+| P3-04 | **Perennial occupancy through dormancy** — the app's most likely bug (D-013) | ✅ |
+| P3-05 | Spacing validation across cells, drifts and specimens | ✅ |
+| P3-06 | Mature-spread projection on a decelerating curve | ✅ |
+| P3-07 | Companion evaluation: table + derived, tiered and radius-aware (D-021/22) | ✅ |
+| P3-08 | Succession — one action generating a staggered series | ✅ |
+| P3-09 | Painted light and sun-requirement warnings | ⬜ |
+| P3-10 | Bed occupancy timeline | ⬜ |
+| P3-11 | Copy last season as a starting point | ⬜ |
+| P3-12 | Planner UI — place, warn, suggest | ⬜ |
+
+**Exit:** 🟨 the domain is done and tested; the planner UI is not built. 192 tests
+cover every claim in the exit criterion except the ones that need a screen.
+
+---
+
+## Phases 4–11
 
 Scope lines only until each is next. Full descriptions and exit criteria are in
 [ROADMAP.md](./ROADMAP.md).

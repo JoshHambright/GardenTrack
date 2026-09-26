@@ -15,3 +15,4 @@ export * from './regions.js';
 export * from './dates.js';
 export * from './schedule.js';
 export * from './planting.js';
+export * from './companions.js';

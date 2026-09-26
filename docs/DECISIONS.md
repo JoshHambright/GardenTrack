@@ -779,3 +779,35 @@ boundary polygons.
 **Costs:** one more setup question, and existing sites created before this have
 no region until they are edited.
 **Status:** ✅ Accepted
+
+---
+
+### D-035 · The short-day penalty belongs in the model, not in the gardener's head
+**Chose:** A fall sowing adds 14 days to days-to-maturity before counting
+backward from the first frost.
+**Why:** a crop finishing in shortening days and cooling soil matures more
+slowly than the seed packet says, and the packet figure is measured in summer.
+Omitting this is the classic reason a fall planting is three weeks late and gets
+frosted — a failure the gardener discovers in October, when nothing can be done
+about it. Fourteen days is the conventional allowance; being approximately right
+here beats being precisely wrong.
+**Costs:** a fall sowing date that looks early to anyone reading the packet. The
+schedule says why in its notes rather than leaving it unexplained.
+**Status:** ✅ Accepted
+
+---
+
+### D-036 · Occupancy is a query about ground, dormancy is a fact about drawing
+**Chose:** `occupiesOn()` returns true for a perennial in **every** month from
+planting onward. `isDormantOn()` is a separate function that affects rendering
+and nothing else. A placement conflict reports whether the thing in the way is
+dormant.
+**Why:** this is D-013 made executable, and the reason it needed its own decision
+is that the two ideas are easy to merge and disastrous to merge. The moment
+dormancy can reach the occupancy answer, the planner offers a coneflower's cells
+for lettuce every March. The conflict carries the `dormant` flag because "there
+is nothing there" is precisely what the gardener will believe when they look at
+the bed — so the warning has to answer the objection before it is raised.
+**Costs:** two functions where one looks sufficient, and a test suite that checks
+all twelve months rather than a representative one.
+**Status:** ✅ Accepted
